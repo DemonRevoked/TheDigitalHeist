@@ -1,0 +1,59 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+
+#define XOR_KEY 0x2A
+
+static void decode_xor(const unsigned char *src, size_t len, char *dst) {
+    for (size_t i = 0; i < len; i++) {
+        dst[i] = (char)(src[i] ^ XOR_KEY);
+    }
+    dst[len] = '\0';
+}
+
+// Evidence tampering tool: verifies a manipulated timestamp against an obfuscated target.
+int main(void) {
+    const unsigned char target_enc[] = {27, 29, 26, 26, 26, 27, 25, 25, 29, 29}; // XOR of "1700013377"
+    char target_str[sizeof(target_enc) + 1];
+    decode_xor(target_enc, sizeof(target_enc), target_str);
+
+    const uint64_t mask = 0x5A5A5A5A5A5A5A5AULL;
+    const uint64_t bias = 0x11111111ULL;
+
+    const char *key_env = getenv("CHALLENGE_KEY");
+    if (!key_env || strlen(key_env) == 0) {
+        fprintf(stderr, "CHALLENGE_KEY not provided. Set env or mount key file.\n");
+        return 1;
+    }
+
+    printf("=== Evidence Tampering Console ===\n");
+    printf("Input tampered timestamp (epoch seconds): ");
+
+    char buf[128];
+    if (!fgets(buf, sizeof buf, stdin)) {
+        fprintf(stderr, "No input.\n");
+        return 1;
+    }
+
+    char *endptr = NULL;
+    uint64_t user_ts = strtoull(buf, &endptr, 10);
+    if (endptr == buf || (*endptr && *endptr != '\n')) {
+        fprintf(stderr, "Invalid numeric input.\n");
+        return 1;
+    }
+
+    // Obfuscated transformation: reverse by analyzing XOR/mask/bias in RE.
+    uint64_t computed = (user_ts ^ mask) - bias + 7ULL;
+    uint64_t target_val = strtoull(target_str, NULL, 10);
+
+    if (computed == target_val) {
+        printf("Timeline rewrite validated.\n");
+        printf("Key: %s\n", key_env);
+        printf("Flag: TDHCTF{tampered_time_offset}\n");
+        return 0;
+    }
+
+    printf("Rejected: timestamp mismatch.\n");
+    return 1;
+}

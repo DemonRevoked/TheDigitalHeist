@@ -1,0 +1,57 @@
+version: "3.9"
+
+services:
+  re01-confession-app:
+    build: ./challenges/re-01-confession-app
+    image: digitalheist/re-01
+    container_name: re01-confession-app
+    tty: true          # keep container attached for interactive prompt
+    stdin_open: true   # allow input when running `docker compose run`
+    environment:
+      - CHALLENGE_KEY_FILE=/run/challenge_key
+      - STUDENT_USER=rio
+      - STUDENT_PASS=RedCipher@1
+    volumes:
+      - ./keys/re-01.key:/run/challenge_key:ro
+    ports:
+      - "2222:22"
+  re02-evidence-tampering:
+    build: ./challenges/re-02-evidence-tampering
+    image: digitalheist/re-02
+    container_name: re02-evidence-tampering
+    tty: true
+    stdin_open: true
+    environment:
+      - CHALLENGE_KEY_FILE=/run/challenge_key
+      - STUDENT_USER=denver
+      - STUDENT_PASS=RedCipher@2
+    volumes:
+      - ./keys/re-02.key:/run/challenge_key:ro
+    ports:
+      - "2223:22"
+
+  landing-app:
+    build:
+      context: .
+      dockerfile: webapp/Dockerfile
+    image: digitalheist/landing-app
+    container_name: landing-app
+    ports:
+      - "80:80"
+    environment:
+      - PORT=80
+      - CLIENT_ORIGIN=http://localhost
+      - CHALLENGES_DIR=/data/challenges
+      - KEYS_DIR=/data/keys
+    volumes:
+      - ./challenges:/data/challenges:ro
+      - ./keys:/data/keys:ro
+      # Live-reload source mounts
+      - ./webapp/server/src:/app/server/src
+      - ./webapp/client/src:/app/client/src
+      - ./webapp/client/index.html:/app/client/index.html
+      - ./webapp/client/vite.config.js:/app/client/vite.config.js
+      - ./webapp/client/public:/app/client/public
+    command: >
+      sh -c "npm --prefix client run build -- --watch --clearScreen=false &
+      PORT=$${PORT:-80} npm --prefix server run dev"

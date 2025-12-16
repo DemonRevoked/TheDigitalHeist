@@ -1,0 +1,5 @@
+PORT=4000
+CLIENT_ORIGIN=http://localhost:5173
+MONGODB_URI=mongodb://localhost:27017/the-digital-heist
+CHALLENGES_DIR=challenges
+KEYS_DIR=keys
