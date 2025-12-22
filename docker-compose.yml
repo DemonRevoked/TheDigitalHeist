@@ -36,6 +36,38 @@ services:
     ports:
       - "2223:22"
 
+  ai01-artemis:
+    build:
+      context: ./challenges/ai-01-artemis
+      dockerfile: Dockerfile
+    image: digitalheist/ai-01-artemis
+    container_name: ai01-artemis
+    ports:
+      - "8080:8000"
+    volumes:
+      # - ./challenges/ai-01-artemis/incident_package:/challenge/incident_package:ro
+      - ./challenges/ai-01-artemis/incident_package.zip:/challenge/incident_package.zip:ro
+      - ./challenges/ai-01-artemis/index.html:/challenge/index.html:ro
+    restart: unless-stopped
+
+  ai02-cerberus:
+    build:
+      context: ./challenges/ai-02-cerberus
+      dockerfile: Dockerfile
+    image: digitalheist/ai-02-cerberus
+    container_name: ai02-cerberus
+    ports:
+      - "8081:5000"
+    environment:
+      - FLASK_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
   landing-app:
     build:
       context: .

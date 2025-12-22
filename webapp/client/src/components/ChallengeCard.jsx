@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 export default function ChallengeCard({ challenge, categoryLabel }) {
-  const { title, slug, shortDescription, files = [], difficulty, points = 0, sshCredentials } = challenge;
+  const { title, slug, shortDescription, files = [], difficulty, points = 0, sshCredentials, platformUrl } = challenge;
 
   const [isOpen, setIsOpen] = useState(false);
   const fileCount = files.length;
@@ -133,6 +133,45 @@ export default function ChallengeCard({ challenge, categoryLabel }) {
                       }}>
                         ssh -p {sshCredentials.port || '22'} {sshCredentials.username}@{sshCredentials.host || 'localhost'}
                       </code>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {platformUrl && (
+              <section className="lists" style={{ marginBottom: '1.5rem' }}>
+                <div className="list">
+                  <div className="list-title">Platform Access</div>
+                  <div style={{ 
+                    background: 'var(--surface-secondary, #1a1a1a)', 
+                    padding: '1rem', 
+                    borderRadius: '8px',
+                    fontFamily: 'monospace',
+                    fontSize: '0.9rem'
+                  }}>
+                    <div style={{ marginBottom: '0.5rem' }}>
+                      <strong>Platform URL:</strong>
+                    </div>
+                    <div style={{ 
+                      marginTop: '0.5rem', 
+                      padding: '0.75rem', 
+                      background: 'var(--surface-primary, #0a0a0a)', 
+                      borderRadius: '4px',
+                      fontSize: '0.85rem',
+                      wordBreak: 'break-all'
+                    }}>
+                      <a 
+                        href={`http://${platformUrl.host || 'localhost'}:${platformUrl.port}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ 
+                          color: 'var(--accent, #ff6b6b)',
+                          textDecoration: 'none'
+                        }}
+                      >
+                        http://{platformUrl.host || 'localhost'}:{platformUrl.port}
+                      </a>
                     </div>
                   </div>
                 </div>

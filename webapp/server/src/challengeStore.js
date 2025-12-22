@@ -96,9 +96,9 @@ const challengeStories = {
     'A compromised Directorate laptop is locked, but privilege escalation gives the crew access. Inside they find local credentials for the AI training environment.',
   'exp-02':
     'This is the final vault. A chained exploit grants root access to the Directorate\'s central server. Inside, they uncover: the full A₀ source code, the training dataset, communication logs, and instructions for future mass surveillance rollouts. This is the digital equivalent of breaking into the Bank of Spain\'s gold vault.',
-  'ai-01':
+  'ai-01-artemis':
     'The team analyzes chat logs between agents and the A₀ system. Patterns show the AI has been impersonating human field officers, steering decisions. A₀ is not just a tool. It is an autonomous strategist—like a digital Alicia Sierra.',
-  'ai-02':
+  'ai-02-cerberus':
     'The final revelation: A₀ generates deepfake audio messages to mislead operatives and shape narratives. The crew identifies inconsistencies and proves the system manipulates internal command structures. The world must see this.'
 };
 
@@ -122,8 +122,8 @@ const challengeDifficulties = {
   'sc-02': 'medium',
   'exp-01': 'medium',
   'exp-02': 'hard',
-  'ai-01': 'easy',
-  'ai-02': 'hard'
+  'ai-01-artemis': 'easy',
+  'ai-02-cerberus': 'hard'
 };
 
 // Narrative order for cards on the landing page
@@ -146,8 +146,8 @@ const challengeOrder = [
   'sc-02',
   'exp-01',
   'exp-02',
-  'ai-01',
-  'ai-02'
+  'ai-01-artemis',
+  'ai-02-cerberus'
 ];
 
 export default class ChallengeStore {
@@ -198,16 +198,27 @@ export default class ChallengeStore {
   }
 
   loadFromFilesystem() {
-    if (!fs.existsSync(this.challengeFilesDir)) return [];
-    const challengeDirs = fs
-      .readdirSync(this.challengeFilesDir, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory());
+    // Get challenges from filesystem directories
+    const filesystemChallenges = [];
+    if (fs.existsSync(this.challengeFilesDir)) {
+      const challengeDirs = fs
+        .readdirSync(this.challengeFilesDir, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory());
 
-    const items = challengeDirs.map((dirent) => {
-      const slug = dirent.name;
+      filesystemChallenges.push(...challengeDirs.map((dirent) => dirent.name));
+    }
+
+    // Get all defined challenges (from challengeStories)
+    const allDefinedChallenges = Object.keys(challengeStories);
+    
+    // Combine filesystem and defined challenges, removing duplicates
+    const allChallengeSlugs = [...new Set([...filesystemChallenges, ...allDefinedChallenges])];
+
+    const items = allChallengeSlugs.map((slug) => {
       const basePath = path.join(this.challengeFilesDir, slug);
       const [category, order] = slug.split('-');
 
+      // Collect files if directory exists
       const files = this.collectFiles(basePath, (relativePath, fullPath) => ({
         name: relativePath,
         url: `/static/challenge-files/${slug}/${relativePath}`,
@@ -226,6 +237,17 @@ export default class ChallengeStore {
         sshCredentials.port = 2222;
       }
       
+      // Add platform URLs for challenges that have web interfaces
+      // Host will be set dynamically in the API based on request or environment variable
+      const platformUrl = {};
+      if (slug === 'ai-01-artemis') {
+        platformUrl.port = 8080;
+        platformUrl.host = this.sshHost; // Will be set in API if not provided
+      } else if (slug === 'ai-02-cerberus') {
+        platformUrl.port = 8081;
+        platformUrl.host = this.sshHost; // Will be set in API if not provided
+      }
+      
       return {
         slug,
         title: formatTitle(slug),
@@ -236,6 +258,7 @@ export default class ChallengeStore {
         files,
         credentials: [],
         sshCredentials: Object.keys(sshCredentials).length > 0 ? sshCredentials : undefined,
+        platformUrl: Object.keys(platformUrl).length > 0 ? platformUrl : undefined,
         tags: [category]
       };
     });

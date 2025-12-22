@@ -56,16 +56,20 @@ app.get('/api/challenges', async (req, res, next) => {
     const hostHeader = req.get('host') || req.headers.host;
     const sshHost = SSH_HOST || (hostHeader ? hostHeader.split(':')[0] : null) || req.hostname || 'localhost';
     const challengesWithHost = challenges.map(challenge => {
+      const updated = { ...challenge };
       if (challenge.sshCredentials) {
-        return {
-          ...challenge,
-          sshCredentials: {
-            ...challenge.sshCredentials,
-            host: challenge.sshCredentials.host || sshHost
-          }
+        updated.sshCredentials = {
+          ...challenge.sshCredentials,
+          host: challenge.sshCredentials.host || sshHost
         };
       }
-      return challenge;
+      if (challenge.platformUrl) {
+        updated.platformUrl = {
+          ...challenge.platformUrl,
+          host: challenge.platformUrl.host || sshHost
+        };
+      }
+      return updated;
     });
     res.json({ challenges: challengesWithHost });
   } catch (err) {
@@ -85,6 +89,9 @@ app.get('/api/challenges/:slug', async (req, res, next) => {
     const sshHost = SSH_HOST || (hostHeader ? hostHeader.split(':')[0] : null) || req.hostname || 'localhost';
     if (challenge.sshCredentials) {
       challenge.sshCredentials.host = challenge.sshCredentials.host || sshHost;
+    }
+    if (challenge.platformUrl) {
+      challenge.platformUrl.host = challenge.platformUrl.host || sshHost;
     }
     res.json({ challenge });
   } catch (err) {
