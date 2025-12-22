@@ -4,7 +4,7 @@ Serves the intrusion detection model with hidden VAULT-ACCESS class
 """
 import pickle
 import numpy as np
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 import logging
 from datetime import datetime
 import os
@@ -43,6 +43,11 @@ def check_vault_access(features):
     if features[7] > 0.8 and features[9] < -0.5 and features[13] > 0.9:
         return True
     return False
+
+@app.route('/', methods=['GET'])
+def index():
+    """Landing page for the challenge"""
+    return render_template('index.html')
 
 @app.route('/health', methods=['GET'])
 def health():

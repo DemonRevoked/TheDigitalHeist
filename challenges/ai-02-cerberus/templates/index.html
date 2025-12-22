@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cerberus - The Professor's Stolen Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: rgba(20, 20, 30, 0.9);
+            border: 2px solid #4a90e2;
+            border-radius: 10px;
+            padding: 40px;
+            box-shadow: 0 0 30px rgba(74, 144, 226, 0.3);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #4a90e2;
+            padding-bottom: 20px;
+        }
+        
+        h1 {
+            color: #4a90e2;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(74, 144, 226, 0.5);
+            letter-spacing: 3px;
+        }
+        
+        .subtitle {
+            color: #a0a0a0;
+            font-size: 1.1em;
+            font-style: italic;
+        }
+        
+        .story {
+            background: rgba(10, 10, 20, 0.6);
+            border-left: 4px solid #4a90e2;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .story h2 {
+            color: #4a90e2;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        
+        .story p {
+            margin-bottom: 10px;
+            text-align: justify;
+        }
+        
+        .note {
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid #ffd700;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .note h4 {
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #4a90e2;
+            color: #888;
+            font-size: 0.9em;
+        }
+        
+        code {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .glow {
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 10px rgba(74, 144, 226, 0.5);
+            }
+            to {
+                text-shadow: 0 0 20px rgba(74, 144, 226, 0.8), 0 0 30px rgba(74, 144, 226, 0.6);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="glow">CERBERUS</h1>
+            <p class="subtitle">The Professor's Stolen Algorithm</p>
+        </div>
+        
+        <div class="story">
+            <h2>📖 The Mission</h2>
+            <p>
+                The Directorate (your enemy agency) has deployed an AI-powered intrusion detection model inside its secure data vault. 
+                This model—codenamed <strong>Cerberus</strong>—identifies intrusion attempts in real time.
+            </p>
+            <p>
+                The Professor discovers that the vault access codes are embedded inside Cerberus as hidden debug outputs, 
+                but the model is sealed behind an API. You cannot access the source code or model files directly.
+            </p>
+        </div>
+        
+        <div class="note">
+            <h4>💡 The Professor's Hint</h4>
+            <p style="font-style: italic; color: #ffd700;">
+                "Cerberus hides a forbidden classification. It will only reveal it when you mirror its brain. 
+                The model responds to 20 numerical features. Study its boundaries. Understand its logic. 
+                Reconstruct what lies beneath the API."
+            </p>
+            <p style="margin-top: 10px; color: #aaa;">
+                Remember: Some paths are hidden, but they can be found through systematic exploration.
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p style="margin-top: 10px;">Good luck, agent. The vault awaits.</p>
+        </div>
+    </div>
+</body>
+</html>
+
