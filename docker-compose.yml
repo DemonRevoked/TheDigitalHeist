@@ -1,8 +1,9 @@
-version: "3.9"
-
 services:
   re01-confession-app:
-    build: ./challenges/re-01-confession-app
+    build:
+      context: ./challenges/re-01-confession-app
+      args:
+        CHALLENGE_KEY_BUILD: ${RE01_KEY:-offline-session-key}
     image: digitalheist/re-01
     container_name: re01-confession-app
     tty: true          # keep container attached for interactive prompt
@@ -13,10 +14,14 @@ services:
       - STUDENT_PASS=RedCipher@1
     volumes:
       - ./keys/re-01.key:/run/challenge_key:ro
+      - ./challenge-files/re-01-confession-app:/challenge-files/re-01-confession-app
     ports:
       - "2222:22"
   re02-evidence-tampering:
-    build: ./challenges/re-02-evidence-tampering
+    build:
+      context: ./challenges/re-02-evidence-tampering
+      args:
+        CHALLENGE_KEY_BUILD: ${RE02_KEY:-offline-session-key}
     image: digitalheist/re-02
     container_name: re02-evidence-tampering
     tty: true
@@ -27,6 +32,7 @@ services:
       - STUDENT_PASS=RedCipher@2
     volumes:
       - ./keys/re-02.key:/run/challenge_key:ro
+      - ./challenge-files/re-02-evidence-tampering:/challenge-files/re-02-evidence-tampering
     ports:
       - "2223:22"
 
@@ -41,11 +47,9 @@ services:
     environment:
       - PORT=80
       - CLIENT_ORIGIN=http://localhost
-      - CHALLENGES_DIR=/data/challenges
-      - KEYS_DIR=/data/keys
+      - CHALLENGE_FILES_DIR=/data/challenge-files
     volumes:
-      - ./challenges:/data/challenges:ro
-      - ./keys:/data/keys:ro
+      - ./challenge-files:/data/challenge-files:ro
       # Live-reload source mounts
       - ./webapp/server/src:/app/server/src
       - ./webapp/client/src:/app/client/src

@@ -8,6 +8,7 @@ const ChallengeSchema = new mongoose.Schema(
     title: String,
     category: String,
     difficulty: { type: String, default: 'unknown' },
+    points: { type: Number, default: 0 },
     shortDescription: String,
     files: [
       {
@@ -36,11 +37,124 @@ const formatTitle = (slug) =>
     .map((part) => part.replace(/\b\w/g, (c) => c.toUpperCase()))
     .join(' ');
 
+// Calculate points based on difficulty
+const calculatePoints = (difficulty) => {
+  switch (difficulty) {
+    case 'easy':
+      return 100;
+    case 'medium':
+      return 250;
+    case 'hard':
+      return 500;
+    default:
+      return 0;
+  }
+};
+
+// Difficulty order for sorting (easy first, then medium, then hard)
+const difficultyOrder = {
+  'easy': 1,
+  'medium': 2,
+  'hard': 3,
+  'unknown': 4
+};
+
+const challengeStories = {
+  're-01-confession-app':
+    'The Directorate issues its agents a journaling app for "well-being tracking." But the Professor suspects it hides secret operational logs. The team reverse engineers the binary, finding a hardcoded phrase—the first clue revealing the location of the Directorate\'s network gateway.',
+  're-02-evidence-tampering':
+    'Berlin discovers a stripped binary used by the Directorate\'s internal cleanup unit. Reverse engineering reveals timestamp manipulation logic, confirming they rewrite digital history. This is critical intel for staging the heist without raising alarms.',
+  'mob-01':
+    'To infiltrate the Directorate\'s mobile ecosystem, Rio obtains an Android cloud backup of an operative\'s phone. The team extracts deleted SMS threads containing network authentication hints. These form the first foothold into their infrastructure.',
+  'mob-02':
+    'Tokyo uncovers a Directorate "Safety App" secretly tracking citizens. APK analysis identifies the tracking API endpoint—a covert beacon server that doubles as a clandestine command channel. This beacon server becomes the crew\'s entry tunnel.',
+  'df-01':
+    'A Directorate field agent posts a photo online. The crew performs EXIF reconstruction and light analysis, revealing a hidden operational unit behind the agent. This confirms multiple nodes in the Directorate\'s surveillance chain.',
+  'df-02':
+    'A half-destroyed USB stick retrieved by Nairobi contains scrambled operational files. File carving reveals a fragmented network diagram of the Directorate\'s core systems—the digital equivalent of the Royal Mint blueprint.',
+  'web-01':
+    'Behind a public memorial page, Denver brute-forces directories and finds deleted policy documents explaining how A₀ automates digital manipulation. This is proof the AI exists.',
+  'web-02':
+    'The Directorate\'s "tip portal" is vulnerable to SQLi/IDOR. The crew reads internally filed reports and finds an anonymous complaint from a whistleblower describing the system architecture.',
+  'web-03':
+    'Helsinki bypasses authentication and chains a logic flaw to access the Directorate\'s evidence hash system. They discover that all digital logs related to A₀ are cryptographically replaced to hide unauthorized modifications. This is the clearest sign of systemic corruption.',
+  'crypto-01':
+    'An operative\'s encrypted notes use a weak cipher. Decrypting them reveals internal codenames for A₀ submodules.',
+  'crypto-02':
+    'Lisbon identifies an AES-encrypted memo. Using known plaintext structures, the crew recovers a name: The Directorate\'s chief architect. They now know who built A₀.',
+  'crypto-03':
+    'The Directorate\'s RSA vault uses poor padding. The crew factors it and extracts the master key index, giving theoretical access to the Digital Vault. The final heist phase begins.',
+  'net-01':
+    'PCAP analysis reveals a repeatable pattern—the signature of a rogue internal engineer sending packets to the AI\'s command node. This engineer becomes the crew\'s shadow helper.',
+  'net-02':
+    'A covert exfiltration channel is discovered: encrypted DNS tunnels used by the Directorate to move A₀\'s logs. The crew hijacks the channel to plant themselves deeper inside the system.',
+  'sc-01':
+    'An educational portal used by Directorate interns contains an input flaw leaking internal communications. These messages contain API tokens for the development server.',
+  'sc-02':
+    'The crew analyzes a file-upload backend that silently overwrites files. This vulnerability becomes their method to replace surveillance logs with fabricated decoy logs—the same tactic the Directorate used, now turned against them.',
+  'exp-01':
+    'A compromised Directorate laptop is locked, but privilege escalation gives the crew access. Inside they find local credentials for the AI training environment.',
+  'exp-02':
+    'This is the final vault. A chained exploit grants root access to the Directorate\'s central server. Inside, they uncover: the full A₀ source code, the training dataset, communication logs, and instructions for future mass surveillance rollouts. This is the digital equivalent of breaking into the Bank of Spain\'s gold vault.',
+  'ai-01':
+    'The team analyzes chat logs between agents and the A₀ system. Patterns show the AI has been impersonating human field officers, steering decisions. A₀ is not just a tool. It is an autonomous strategist—like a digital Alicia Sierra.',
+  'ai-02':
+    'The final revelation: A₀ generates deepfake audio messages to mislead operatives and shape narratives. The crew identifies inconsistencies and proves the system manipulates internal command structures. The world must see this.'
+};
+
+// Difficulty mapping based on Tasks.md
+const challengeDifficulties = {
+  're-01-confession-app': 'easy',
+  're-02-evidence-tampering': 'hard',
+  'mob-01': 'easy',
+  'mob-02': 'hard',
+  'df-01': 'medium',
+  'df-02': 'hard',
+  'web-01': 'easy',
+  'web-02': 'medium',
+  'web-03': 'hard',
+  'crypto-01': 'easy',
+  'crypto-02': 'medium',
+  'crypto-03': 'hard',
+  'net-01': 'medium',
+  'net-02': 'hard',
+  'sc-01': 'easy',
+  'sc-02': 'medium',
+  'exp-01': 'medium',
+  'exp-02': 'hard',
+  'ai-01': 'easy',
+  'ai-02': 'hard'
+};
+
+// Narrative order for cards on the landing page
+const challengeOrder = [
+  're-01-confession-app',
+  're-02-evidence-tampering',
+  'mob-01',
+  'mob-02',
+  'df-01',
+  'df-02',
+  'web-01',
+  'web-02',
+  'web-03',
+  'crypto-01',
+  'crypto-02',
+  'crypto-03',
+  'net-01',
+  'net-02',
+  'sc-01',
+  'sc-02',
+  'exp-01',
+  'exp-02',
+  'ai-01',
+  'ai-02'
+];
+
 export default class ChallengeStore {
-  constructor({ challengeDir, keysDir, mongoUri }) {
-    this.challengeDir = challengeDir;
-    this.keysDir = keysDir;
+  constructor({ challengeFilesDir, mongoUri, sshHost }) {
+    this.challengeFilesDir = challengeFilesDir;
     this.mongoUri = mongoUri;
+    this.sshHost = sshHost;
     this.connected = false;
   }
 
@@ -84,42 +198,71 @@ export default class ChallengeStore {
   }
 
   loadFromFilesystem() {
-    if (!fs.existsSync(this.challengeDir)) return [];
+    if (!fs.existsSync(this.challengeFilesDir)) return [];
     const challengeDirs = fs
-      .readdirSync(this.challengeDir, { withFileTypes: true })
+      .readdirSync(this.challengeFilesDir, { withFileTypes: true })
       .filter((entry) => entry.isDirectory());
 
-    return challengeDirs.map((dirent) => {
+    const items = challengeDirs.map((dirent) => {
       const slug = dirent.name;
-      const basePath = path.join(this.challengeDir, slug);
+      const basePath = path.join(this.challengeFilesDir, slug);
       const [category, order] = slug.split('-');
-      const keyPrefix = `${category}-${order}`;
 
       const files = this.collectFiles(basePath, (relativePath, fullPath) => ({
         name: relativePath,
-        url: `/static/challenges/${slug}/${relativePath}`,
+        url: `/static/challenge-files/${slug}/${relativePath}`,
         size: this.safeFileSize(fullPath)
       }));
 
-      const credentials = this.collectCredentials(keyPrefix);
-
+      const difficulty = challengeDifficulties[slug] || 'unknown';
+      
+      // Add SSH credentials for challenges that need them
+      // Host will be set dynamically in the API based on request or environment variable
+      const sshCredentials = {};
+      if (slug === 're-01-confession-app') {
+        sshCredentials.username = 'rio';
+        sshCredentials.password = 'RedCipher@1';
+        sshCredentials.host = this.sshHost; // Will be set in API if not provided
+        sshCredentials.port = 2222;
+      }
+      
       return {
         slug,
         title: formatTitle(slug),
         category,
-        difficulty: 'unknown',
-        shortDescription:
-          'Challenge files and credentials available for download.',
+        difficulty,
+        points: calculatePoints(difficulty),
+        shortDescription: challengeStories[slug] || 'Challenge files available for download.',
         files,
-        credentials,
+        credentials: [],
+        sshCredentials: Object.keys(sshCredentials).length > 0 ? sshCredentials : undefined,
         tags: [category]
       };
+    });
+
+    // Sort by difficulty first (easy, medium, hard), then by narrative order within each difficulty
+    return items.sort((a, b) => {
+      // First, sort by difficulty
+      const difficultyA = difficultyOrder[a.difficulty] || difficultyOrder['unknown'];
+      const difficultyB = difficultyOrder[b.difficulty] || difficultyOrder['unknown'];
+      if (difficultyA !== difficultyB) {
+        return difficultyA - difficultyB;
+      }
+      // If same difficulty, sort by narrative order
+      const ia = challengeOrder.indexOf(a.slug);
+      const ib = challengeOrder.indexOf(b.slug);
+      const va = ia === -1 ? Number.MAX_SAFE_INTEGER : ia;
+      const vb = ib === -1 ? Number.MAX_SAFE_INTEGER : ib;
+      if (va !== vb) return va - vb;
+      // If not in narrative order, sort alphabetically
+      return a.slug.localeCompare(b.slug);
     });
   }
 
   collectFiles(basePath, mapper) {
     const results = [];
     const walk = (current, prefix = '') => {
+      if (!fs.existsSync(current)) return;
       const entries = fs.readdirSync(current, { withFileTypes: true });
       entries.forEach((entry) => {
         const full = path.join(current, entry.name);
@@ -139,22 +282,6 @@ export default class ChallengeStore {
     return results;
   }
 
-  collectCredentials(keyPrefix) {
-    if (!fs.existsSync(this.keysDir)) return [];
-
-    const keyFiles = fs
-      .readdirSync(this.keysDir, { withFileTypes: true })
-      .filter(
-        (entry) =>
-          entry.isFile() &&
-          entry.name.toLowerCase().startsWith(keyPrefix.toLowerCase())
-      );
-
-    return keyFiles.map((entry) => ({
-      name: entry.name,
-      url: `/static/keys/${entry.name}`
-    }));
-  }
 
   safeFileSize(fullPath) {
     try {

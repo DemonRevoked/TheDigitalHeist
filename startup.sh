@@ -174,6 +174,16 @@ start_containers() {
     dc="docker compose"
   fi
   $dc -f "$SCRIPT_DIR/docker-compose.yml" down 2>/dev/null || true
+  
+  # Read keys and export as environment variables for docker-compose build args
+  # These will be embedded into the binaries at compile time
+  if [ -f "$KEY_DIR/re-01.key" ]; then
+    export RE01_KEY="$(cat "$KEY_DIR/re-01.key" | tr -d '\n\r')"
+  fi
+  if [ -f "$KEY_DIR/re-02.key" ]; then
+    export RE02_KEY="$(cat "$KEY_DIR/re-02.key" | tr -d '\n\r')"
+  fi
+  
   $dc -f "$SCRIPT_DIR/docker-compose.yml" up --build -d
   echo "[+] Docker containers started!"
 }
@@ -199,12 +209,6 @@ main() {
   echo "=========================================="
   echo "  Setup Complete!"
   echo "=========================================="
-  echo ""
-  echo "SSH Access:"
-  echo "  Host: $(hostname -I | awk '{print $1}')"
-  echo "  Port: $SSH_PORT"
-  echo "  Username: $SSH_USERNAME"
-  echo "  Password: $SSH_PASSWORD"
   echo ""
 }
 

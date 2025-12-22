@@ -52,9 +52,13 @@ export default function App() {
         <div className="hero-copy">
           <p className="eyebrow">The Digital Heist</p>
           <h1 className="heist-title">Heist Briefing Board</h1>
-          <p className="lede">
-            Quick briefings only. Tap a dossier to open the vault and pull files
-            or keys. No logins—just drop the intel to the crew.
+          <p className="welcome-note">
+            Welcome to Operation Red Cipher. The Professor has assembled a crew
+            of hackers, analysts, and cryptographers to breach the Directorate's
+            Digital Vault and expose the A₀ surveillance system. Each challenge
+            contains files and intel needed to progress. Solve them, extract the
+            flags, and submit your findings on the WhizRange platform. The heist
+            begins now.
           </p>
         </div>
       </header>
@@ -77,6 +81,14 @@ export default function App() {
           )}
         </div>
       )}
+      <footer className="footer">
+        <p className="disclaimer">
+          <strong>Disclaimer:</strong> This CTF is inspired by "La Casa de
+          Papel" (Money Heist). All original rights remain with the creators of
+          La Casa de Papel / Money Heist. This is a fan-created educational
+          cybersecurity challenge.
+        </p>
+      </footer>
     </div>
   );
 }

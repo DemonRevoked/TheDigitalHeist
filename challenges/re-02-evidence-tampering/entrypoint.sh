@@ -13,14 +13,17 @@ echo "$STUDENT_USER:$STUDENT_PASS" | chpasswd
 # Start sshd
 /usr/sbin/sshd
 
-# Read key from file or env; no local generation here.
+# Read key from file or env; fallback handled in binary for offline use.
 if [ -n "${CHALLENGE_KEY_FILE:-}" ] && [ -f "$CHALLENGE_KEY_FILE" ]; then
   export CHALLENGE_KEY="$(cat "$CHALLENGE_KEY_FILE")"
 elif [ -n "${CHALLENGE_KEY:-}" ]; then
   export CHALLENGE_KEY
-else
-  echo "CHALLENGE_KEY not provided; set CHALLENGE_KEY or mount CHALLENGE_KEY_FILE." >&2
-  exit 1
+fi
+
+# Copy compiled binary to shared challenge-files mount for download
+if [ -d "/challenge-files/re-02-evidence-tampering" ]; then
+  cp /app/evidence_tool /challenge-files/re-02-evidence-tampering/evidence_tool
+  chmod 755 /challenge-files/re-02-evidence-tampering/evidence_tool || true
 fi
 
 exec /app/evidence_tool

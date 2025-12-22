@@ -1,91 +1,165 @@
 import { useState } from 'react';
 
 export default function ChallengeCard({ challenge, categoryLabel }) {
-  const { title, slug, shortDescription, files = [], credentials = [] } =
-    challenge;
+  const { title, slug, shortDescription, files = [], difficulty, points = 0, sshCredentials } = challenge;
 
   const [isOpen, setIsOpen] = useState(false);
   const fileCount = files.length;
-  const credCount = credentials.length;
-  const firstFile = files[0];
+
+  const difficultyClass = difficulty && difficulty !== 'unknown' ? `card-difficulty-${difficulty}` : '';
 
   return (
-    <article className={`card ${isOpen ? 'expanded' : 'collapsed'}`}>
-      <header className="card-header">
-        <div className="card-headline">
-          <div className="chip">{categoryLabel}</div>
-          <h2>{title}</h2>
-          <p className="slug">/{slug}</p>
-        </div>
-        <button
-          className="pill action"
-          type="button"
-          onClick={() => setIsOpen((v) => !v)}
-        >
-          {isOpen ? 'Close dossier' : 'Open dossier'}
-        </button>
-      </header>
-
-      <p className="summary">
-        {shortDescription || 'Briefing ready. Tap to view details.'}
-      </p>
+    <>
+      <article
+        className={`card collapsed ${isOpen ? 'card-active' : ''} ${difficultyClass}`}
+        role="button"
+        tabIndex={0}
+        onClick={() => setIsOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setIsOpen(true);
+          }
+        }}
+      >
+        <header className="card-header">
+          <div className="card-headline">
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div className="chip">{categoryLabel}</div>
+              {difficulty && difficulty !== 'unknown' && (
+                <div className={`difficulty-badge difficulty-${difficulty}`}>
+                  {difficulty === 'easy' && '🥉 Easy'}
+                  {difficulty === 'medium' && '🥈 Medium'}
+                  {difficulty === 'hard' && '🥇 Hard'}
+                </div>
+              )}
+              {points > 0 && (
+                <div className="points-badge">
+                  {points} pts
+                </div>
+              )}
+            </div>
+            <h2>{title}</h2>
+            <p className="slug">/{slug}</p>
+          </div>
+        </header>
+      </article>
 
       {!isOpen ? null : (
-        <section className="details">
-          <div className="quick-stats">
-            <span className="pill">
-              {fileCount} {fileCount === 1 ? 'file' : 'files'}
-            </span>
-            <span className="pill ghost">
-              {credCount} {credCount === 1 ? 'key' : 'keys'}
-            </span>
+        <div className="modal-backdrop" onClick={() => setIsOpen(false)}>
+          <div
+            className="modal-card"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${title} details`}
+          >
+            <div className="modal-header">
+              <div>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                  <div className="chip">{categoryLabel}</div>
+                  {difficulty && difficulty !== 'unknown' && (
+                    <div className={`difficulty-badge difficulty-${difficulty}`}>
+                      {difficulty === 'easy' && '🥉 Easy'}
+                      {difficulty === 'medium' && '🥈 Medium'}
+                      {difficulty === 'hard' && '🥇 Hard'}
+                    </div>
+                  )}
+                  {points > 0 && (
+                    <div className="points-badge">
+                      {points} pts
+                    </div>
+                  )}
+                </div>
+                <h2>{title}</h2>
+                <p className="slug">/{slug}</p>
+              </div>
+              <button
+                className="pill action"
+                type="button"
+                onClick={() => setIsOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+
+            <p className="summary">
+              {shortDescription ||
+                'Intel package ready. Pull files and keys directly from the vault.'}
+            </p>
+
+            <div className="quick-stats">
+              <span className="pill">
+                {fileCount} {fileCount === 1 ? 'file' : 'files'}
+              </span>
+            </div>
+
+            {sshCredentials && (
+              <section className="lists" style={{ marginBottom: '1.5rem' }}>
+                <div className="list">
+                  <div className="list-title">SSH Access</div>
+                  <div style={{ 
+                    background: 'var(--surface-secondary, #1a1a1a)', 
+                    padding: '1rem', 
+                    borderRadius: '8px',
+                    fontFamily: 'monospace',
+                    fontSize: '0.9rem'
+                  }}>
+                    <div style={{ marginBottom: '0.5rem' }}>
+                      <strong>Host:</strong> {sshCredentials.host || 'localhost'}
+                    </div>
+                    <div style={{ marginBottom: '0.5rem' }}>
+                      <strong>Port:</strong> {sshCredentials.port || '22'}
+                    </div>
+                    <div style={{ marginBottom: '0.5rem' }}>
+                      <strong>Username:</strong> {sshCredentials.username}
+                    </div>
+                    <div style={{ marginBottom: '0.5rem' }}>
+                      <strong>Password:</strong> {sshCredentials.password}
+                    </div>
+                    <div style={{ 
+                      marginTop: '0.75rem', 
+                      padding: '0.75rem', 
+                      background: 'var(--surface-primary, #0a0a0a)', 
+                      borderRadius: '4px',
+                      fontSize: '0.85rem',
+                      color: 'var(--text-secondary, #888)'
+                    }}>
+                      <strong>Command:</strong><br />
+                      <code style={{ 
+                        display: 'block', 
+                        marginTop: '0.25rem',
+                        wordBreak: 'break-all'
+                      }}>
+                        ssh -p {sshCredentials.port || '22'} {sshCredentials.username}@{sshCredentials.host || 'localhost'}
+                      </code>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {files.length === 0 ? (
+              <div className="muted">No files available yet.</div>
+            ) : (
+              <section className="lists">
+                <div className="list">
+                  <div className="list-title">Download Challenge Files</div>
+                  <ul>
+                    {files.map((file) => (
+                      <li key={file.url}>
+                        <a href={file.url} download>
+                          {file.name}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </section>
+            )}
           </div>
-
-          {firstFile ? (
-            <a className="primary-btn" href={firstFile.url} download>
-              Download files
-            </a>
-          ) : (
-            <div className="muted">No files available yet.</div>
-          )}
-
-          <section className="lists">
-            <div className="list">
-              <div className="list-title">Payload</div>
-              {files.length === 0 ? (
-                <p className="muted">No payload files yet.</p>
-              ) : (
-                <ul>
-                  {files.map((file) => (
-                    <li key={file.url}>
-                      <a href={file.url} download>
-                        {file.name}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <div className="list">
-              <div className="list-title">Access Keys / Creds</div>
-              {credentials.length === 0 ? (
-                <p className="muted">No matching keys in the vault.</p>
-              ) : (
-                <ul>
-                  {credentials.map((cred) => (
-                    <li key={cred.url}>
-                      <a href={cred.url} download>
-                        {cred.name}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </section>
-        </section>
+        </div>
       )}
-    </article>
+    </>
   );
 }

@@ -16,7 +16,7 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    linear-gradient(rgba(5, 5, 5, 0.35), rgba(5, 5, 5, 0.5)),
+    linear-gradient(rgba(5, 5, 5, 0.65), rgba(5, 5, 5, 0.85)),
     url('./images/background.jpg') center/cover no-repeat fixed;
   color: #f6f6f6;
 }
@@ -41,7 +41,7 @@ body {
 
 .hero h1 {
   margin: 0.2rem 0 0.3rem;
-  font-size: 2.4rem;
+  font-size: 2.8rem;
   letter-spacing: 0.05em;
   color: #f5f5f5;
 }
@@ -51,7 +51,7 @@ body {
     sans-serif;
   text-transform: uppercase;
   color: #ff5167;
-  font-size: 3.1rem;
+  font-size: 3.6rem;
   letter-spacing: 0.08em;
 }
 
@@ -70,6 +70,40 @@ body {
   max-width: 620px;
   margin-left: auto;
   margin-right: auto;
+}
+
+.welcome-note {
+  margin-top: 1rem;
+  color: #d9d9d9;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.7;
+  font-size: 1.05rem;
+}
+
+.disclaimer {
+  margin-top: 0;
+  padding: 1rem;
+  background: rgba(255, 81, 103, 0.1);
+  border: 1px solid rgba(255, 81, 103, 0.3);
+  border-radius: 10px;
+  color: #e0e0e0;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.disclaimer strong {
+  color: #ff5167;
+}
+
+.footer {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .filters {
@@ -117,6 +151,39 @@ body {
   border-color: rgba(255, 81, 103, 0.55);
 }
 
+.card.card-active {
+  border-color: rgba(255, 81, 103, 0.7);
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.55);
+}
+
+.card-difficulty-easy {
+  border-left: 3px solid rgba(205, 127, 50, 0.6);
+}
+
+.card-difficulty-easy:hover {
+  border-left-color: rgba(205, 127, 50, 0.9);
+}
+
+.card-difficulty-medium {
+  border-left: 3px solid rgba(192, 192, 192, 0.6);
+}
+
+.card-difficulty-medium:hover {
+  border-left-color: rgba(192, 192, 192, 0.9);
+}
+
+.card-difficulty-hard {
+  border-left: 3px solid rgba(255, 215, 0, 0.6);
+}
+
+.card-difficulty-hard:hover {
+  border-left-color: rgba(255, 215, 0, 0.9);
+}
+
+.card.collapsed {
+  cursor: pointer;
+}
+
 .card::before {
   content: '';
   position: absolute;
@@ -142,6 +209,7 @@ body {
   justify-content: space-between;
   gap: 0.75rem;
   align-items: flex-start;
+  width: 100%;
 }
 
 .card h2 {
@@ -149,8 +217,13 @@ body {
   font-size: 1.2rem;
 }
 
+.card-headline {
+  width: 100%;
+}
+
 .card-headline h2 {
   letter-spacing: -0.01em;
+  margin-top: 0.5rem;
 }
 
 .slug {
@@ -174,6 +247,72 @@ body {
   border-radius: 999px;
   font-size: 0.82rem;
   border: 1px solid rgba(255, 81, 103, 0.35);
+}
+
+.difficulty-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.difficulty-easy {
+  background: linear-gradient(135deg, rgba(205, 127, 50, 0.25), rgba(184, 115, 51, 0.15));
+  color: #d4a574;
+  border: 1px solid rgba(205, 127, 50, 0.5);
+  box-shadow: 0 2px 8px rgba(205, 127, 50, 0.2);
+}
+
+.difficulty-medium {
+  background: linear-gradient(135deg, rgba(192, 192, 192, 0.25), rgba(169, 169, 169, 0.15));
+  color: #e8e8e8;
+  border: 1px solid rgba(192, 192, 192, 0.5);
+  box-shadow: 0 2px 8px rgba(192, 192, 192, 0.2);
+}
+
+.difficulty-hard {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.25), rgba(218, 165, 32, 0.15));
+  color: #ffd700;
+  border: 1px solid rgba(255, 215, 0, 0.5);
+  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.2);
+}
+
+.difficulty-easy:hover {
+  background: linear-gradient(135deg, rgba(205, 127, 50, 0.35), rgba(184, 115, 51, 0.25));
+  border-color: rgba(205, 127, 50, 0.7);
+}
+
+.difficulty-medium:hover {
+  background: linear-gradient(135deg, rgba(192, 192, 192, 0.35), rgba(169, 169, 169, 0.25));
+  border-color: rgba(192, 192, 192, 0.7);
+}
+
+.difficulty-hard:hover {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.35), rgba(218, 165, 32, 0.25));
+  border-color: rgba(255, 215, 0, 0.7);
+}
+
+.points-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: linear-gradient(135deg, rgba(255, 81, 103, 0.2), rgba(255, 81, 103, 0.1));
+  color: #ff5167;
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border: 1px solid rgba(255, 81, 103, 0.4);
+  box-shadow: 0 2px 6px rgba(255, 81, 103, 0.15);
+}
+
+.points-badge:hover {
+  background: linear-gradient(135deg, rgba(255, 81, 103, 0.3), rgba(255, 81, 103, 0.2));
+  border-color: rgba(255, 81, 103, 0.6);
 }
 
 .pill {
@@ -223,6 +362,33 @@ body {
 
 .primary-btn:hover {
   filter: brightness(1.05);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 20;
+}
+
+.modal-card {
+  background: #0f0f0f;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.2rem;
+  width: min(720px, 90vw);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
 }
 
 .details {

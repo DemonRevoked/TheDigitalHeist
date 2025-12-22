@@ -17,16 +17,13 @@ const PORT = process.env.PORT || 4000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN;
 // From /app/server/src -> /app
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
-const CHALLENGES_DIR = path.resolve(
+const CHALLENGE_FILES_DIR = path.resolve(
   PROJECT_ROOT,
-  process.env.CHALLENGES_DIR || 'data/challenges'
-);
-const KEYS_DIR = path.resolve(
-  PROJECT_ROOT,
-  process.env.KEYS_DIR || 'data/keys'
+  process.env.CHALLENGE_FILES_DIR || 'challenge-files'
 );
 const CLIENT_DIST = path.resolve(PROJECT_ROOT, 'client/dist');
 const MONGODB_URI = process.env.MONGODB_URI;
+const SSH_HOST = process.env.SSH_HOST || process.env.CHALLENGE_SSH_HOST;
 
 const app = express();
 
@@ -38,14 +35,13 @@ app.use(
 app.use(express.json());
 app.use(morgan('dev'));
 
-// Expose challenge assets and key files for download
-app.use('/static/challenges', express.static(CHALLENGES_DIR));
-app.use('/static/keys', express.static(KEYS_DIR));
+// Expose challenge files for download (no source code, no keys)
+app.use('/static/challenge-files', express.static(CHALLENGE_FILES_DIR));
 
 const store = new ChallengeStore({
-  challengeDir: CHALLENGES_DIR,
-  keysDir: KEYS_DIR,
-  mongoUri: MONGODB_URI
+  challengeFilesDir: CHALLENGE_FILES_DIR,
+  mongoUri: MONGODB_URI,
+  sshHost: SSH_HOST
 });
 
 app.get('/api/health', (req, res) => {
@@ -55,7 +51,23 @@ app.get('/api/health', (req, res) => {
 app.get('/api/challenges', async (req, res, next) => {
   try {
     const challenges = await store.list();
-    res.json({ challenges });
+    // Extract the IP/host from the request - this is the address the user used to access the page
+    // Priority: environment variable > Host header (IP or domain) > hostname > localhost
+    const hostHeader = req.get('host') || req.headers.host;
+    const sshHost = SSH_HOST || (hostHeader ? hostHeader.split(':')[0] : null) || req.hostname || 'localhost';
+    const challengesWithHost = challenges.map(challenge => {
+      if (challenge.sshCredentials) {
+        return {
+          ...challenge,
+          sshCredentials: {
+            ...challenge.sshCredentials,
+            host: challenge.sshCredentials.host || sshHost
+          }
+        };
+      }
+      return challenge;
+    });
+    res.json({ challenges: challengesWithHost });
   } catch (err) {
     next(err);
   }
@@ -66,6 +78,13 @@ app.get('/api/challenges/:slug', async (req, res, next) => {
     const challenge = await store.get(req.params.slug);
     if (!challenge) {
       return res.status(404).json({ message: 'Challenge not found' });
+    }
+    // Extract the IP/host from the request - this is the address the user used to access the page
+    // Priority: environment variable > Host header (IP or domain) > hostname > localhost
+    const hostHeader = req.get('host') || req.headers.host;
+    const sshHost = SSH_HOST || (hostHeader ? hostHeader.split(':')[0] : null) || req.hostname || 'localhost';
+    if (challenge.sshCredentials) {
+      challenge.sshCredentials.host = challenge.sshCredentials.host || sshHost;
     }
     res.json({ challenge });
   } catch (err) {
