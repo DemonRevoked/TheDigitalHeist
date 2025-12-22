@@ -1,0 +1,7 @@
+Security Alert #A-551
+The AI flagged one image as having irregular pixel distribution.
+Analyst note: LSB channel noise looks intentionally manipulated.
+Suspected insider codename: ArtemisAI.
+
+Recommendation:
+Inspect the file using metadata analysis and LSB extraction.

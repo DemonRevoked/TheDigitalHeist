@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artemis Complex - Security Alert</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            background: rgba(20, 25, 45, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            padding: 40px;
+            margin-top: 20px;
+            border: 1px solid rgba(100, 150, 255, 0.2);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid rgba(100, 150, 255, 0.3);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            color: #64a0ff;
+            text-shadow: 0 0 20px rgba(100, 160, 255, 0.5);
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+
+        .header .subtitle {
+            font-size: 1.2em;
+            color: #ff6b6b;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .alert-banner {
+            background: linear-gradient(90deg, #ff4444 0%, #cc0000 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 30px 0;
+            border-left: 5px solid #ffaa00;
+            box-shadow: 0 5px 15px rgba(255, 68, 68, 0.3);
+        }
+
+        .alert-banner h2 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-banner h2::before {
+            content: "⚠️";
+            font-size: 1.5em;
+        }
+
+        .story-section {
+            background: rgba(30, 35, 55, 0.6);
+            padding: 25px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #64a0ff;
+        }
+
+        .story-section h3 {
+            color: #64a0ff;
+            font-size: 1.4em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .story-section h3::before {
+            content: "🔍";
+            font-size: 1.2em;
+        }
+
+        .story-section p {
+            line-height: 1.8;
+            margin-bottom: 15px;
+            font-size: 1.05em;
+        }
+
+        .mission-section {
+            background: rgba(100, 160, 255, 0.1);
+            padding: 25px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 2px solid rgba(100, 160, 255, 0.3);
+        }
+
+        .mission-section h3 {
+            color: #64a0ff;
+            font-size: 1.4em;
+            margin-bottom: 20px;
+        }
+
+        .mission-section ol {
+            margin-left: 25px;
+            line-height: 2;
+        }
+
+        .mission-section li {
+            margin-bottom: 10px;
+            font-size: 1.05em;
+        }
+
+        .files-section {
+            background: rgba(50, 55, 75, 0.6);
+            padding: 25px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .files-section h3 {
+            color: #64a0ff;
+            font-size: 1.4em;
+            margin-bottom: 15px;
+        }
+
+        .file-list {
+            list-style: none;
+            margin-left: 0;
+        }
+
+        .file-list li {
+            padding: 10px;
+            margin: 8px 0;
+            background: rgba(30, 35, 55, 0.8);
+            border-radius: 5px;
+            border-left: 3px solid #64a0ff;
+            font-family: 'Courier New', monospace;
+            color: #a0c0ff;
+        }
+
+        .file-list li::before {
+            content: "📄 ";
+            margin-right: 8px;
+        }
+
+        .download-section {
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .download-btn {
+            display: inline-block;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #64a0ff 0%, #4a80cc 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 1.2em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(100, 160, 255, 0.4);
+            border: 2px solid rgba(100, 160, 255, 0.5);
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(100, 160, 255, 0.6);
+            background: linear-gradient(135deg, #74b0ff 0%, #5a90dd 100%);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(100, 150, 255, 0.2);
+            color: #888;
+            font-style: italic;
+        }
+
+        .tech-badge {
+            display: inline-block;
+            background: rgba(100, 160, 255, 0.2);
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            margin: 5px;
+            border: 1px solid rgba(100, 160, 255, 0.3);
+        }
+
+        .flag-format {
+            background: rgba(255, 200, 0, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid rgba(255, 200, 0, 0.3);
+            margin: 20px 0;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            color: #ffd700;
+        }
+
+        .flag-format code {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ARTEMIS COMPLEX</h1>
+            <p style="font-size: 1.1em; color: #aaa; margin-top: 5px;">AI-Powered Security System</p>
+            <p class="subtitle">SECURITY BREACH DETECTED</p>
+        </div>
+
+        <div class="alert-banner">
+            <h2>CRITICAL ALERT</h2>
+            <p><strong>Incident ID:</strong> #A-551</p>
+            <p><strong>Time:</strong> Last Night</p>
+            <p><strong>Status:</strong> ACTIVE INVESTIGATION</p>
+        </div>
+
+        <div class="story-section">
+            <h3>Incident Report</h3>
+            <p>
+                The Artemis Complex uses an embedding-based facial verification pipeline for staff authentication.
+                The system compares incoming samples against expected statistical behavior observed during enrollment.
+            </p>
+            <p>
+                <strong>An inconsistency has been detected in the staff image set.</strong> One sample appears to be
+                outside normal operational characteristics.
+            </p>
+            <p>
+                Your task is to determine which sample triggered the anomaly and recover any intelligence artifacts
+                associated with the incident.
+            </p>
+        </div>
+
+        <div class="mission-section">
+            <h3>Your Mission</h3>
+            <ol>
+                <li><strong>Profile the dataset</strong> — Determine what "normal" looks like for the image set and what deviates</li>
+                <li><strong>Validate the anomaly</strong> — Correlate system outputs with observable characteristics in the suspicious sample</li>
+                <li><strong>Recover intelligence</strong> — Extract any residual artifacts left by the intruder</li>
+            </ol>
+        </div>
+
+        <div class="story-section">
+            <h3>AI/ML Forensics Focus</h3>
+            <p>
+                This investigation involves reasoning about model outputs and identifying outliers in a monitored pipeline.
+            </p>
+            <div style="margin-top: 15px;">
+                <span class="tech-badge">Outlier Analysis</span>
+                <span class="tech-badge">Feature Correlation</span>
+                <span class="tech-badge">Artifact Validation</span>
+                <span class="tech-badge">Forensic Triage</span>
+            </div>
+        </div>
+
+        <div class="files-section">
+            <h3>Investigation Files</h3>
+            <ul class="file-list">
+                <li>/incident_package/ - Incident package directory</li>
+                <li>/incident_package/assets/ - Asset collection</li>
+                <li>/incident_package/ - System exports and telemetry</li>
+                <li>/incident_package/readme.txt - Challenge instructions</li>
+            </ul>
+            <p style="margin-top: 15px; line-height: 1.6; color: #bbb;">
+                Note: Not all artifacts are equally useful. Treat this as an investigation—prioritize, correlate, and validate.
+            </p>
+        </div>
+
+        <div class="flag-format">
+            <p><strong>Flag Format:</strong></p>
+            <code>flag{...}</code>
+        </div>
+
+        <div class="download-section">
+            <a href="/incident_package.zip" class="download-btn" download="incident_package.zip">Download Incident Package</a>
+        </div>
+
+        <div class="footer">
+            <p>Good luck, analyst. Profile the anomaly and recover what was left behind.</p>
+            <p style="margin-top: 10px; font-size: 0.9em;">Category: AI/ML + Cybersecurity | Difficulty: Medium</p>
+        </div>
+    </div>
+</body>
+</html>
+

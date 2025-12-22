@@ -1,0 +1,9 @@
+Batch verification summary:
+Samples processed: 5
+Acceptance threshold: 0.35
+
+Result:
+Sample[4] exceeded deviation limits.
+
+Action:
+Sample rejected.
