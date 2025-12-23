@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cerberus - The Professor's Stolen Algorithm</title>
+    <title>Operation Cerberus — Pre-CTF Brief</title>
     <style>
         * {
             margin: 0;
@@ -87,6 +87,34 @@
             margin-bottom: 10px;
         }
         
+        .endpoints-section {
+            margin: 30px 0;
+        }
+        
+        .endpoints-section h3 {
+            color: #4a90e2;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #4a90e2;
+            padding-bottom: 5px;
+        }
+        
+        .endpoint-box {
+            background: rgba(30, 30, 40, 0.6);
+            border-left: 3px solid #4a90e2;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        
+        .endpoint-box h4 {
+            color: #4a90e2;
+            margin-bottom: 5px;
+        }
+        
+        .endpoint-box pre {
+            color: #e0e0e0;
+            font-size: 0.9em;
+        }
+        
         .footer {
             text-align: center;
             margin-top: 30px;
@@ -120,36 +148,56 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1 class="glow">CERBERUS</h1>
-            <p class="subtitle">The Professor's Stolen Algorithm</p>
+            <h1 class="glow">Operation CERBERUS</h1>
         </div>
         
         <div class="story">
-            <h2>📖 The Mission</h2>
             <p>
-                The Directorate (your enemy agency) has deployed an AI-powered intrusion detection model inside its secure data vault. 
-                This model—codenamed <strong>Cerberus</strong>—identifies intrusion attempts in real time.
+                Cerberus is a black-box AI system used by a covert agency to classify digital activity.
             </p>
             <p>
-                The Professor discovers that the vault access codes are embedded inside Cerberus as hidden debug outputs, 
-                but the model is sealed behind an API. You cannot access the source code or model files directly.
+                You cannot see its code, model, or training data.<br>
+                You can only interact with it through its APIs.
+            </p>
+            <p style="margin-top: 15px; font-weight: bold; color: #4a90e2;">
+                Your mission is to <strong>observe</strong>, <strong>understand</strong>, and <strong>expose</strong> Cerberus.
             </p>
         </div>
         
-        <div class="note">
-            <h4>💡 The Professor's Hint</h4>
-            <p style="font-style: italic; color: #ffd700;">
-                "Cerberus hides a forbidden classification. It will only reveal it when you mirror its brain. 
-                The model responds to 20 numerical features. Study its boundaries. Understand its logic. 
-                Reconstruct what lies beneath the API."
-            </p>
-            <p style="margin-top: 10px; color: #aaa;">
-                Remember: Some paths are hidden, but they can be found through systematic exploration.
-            </p>
+        <div class="endpoints-section">
+            <h3>Available Interfaces</h3>
+            
+            <div class="endpoint-box">
+                <h4><code>POST /analyze</code></h4>
+                <p style="color: #aaa; margin: 5px 0;">Content-Type: application/json</p>
+                <pre style="background: rgba(0, 0, 0, 0.4); padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 10px;">{
+  "features": [ &lt;20 numerical values&gt; ]
+}</pre>
+                <p style="color: #aaa; margin-top: 10px; font-size: 0.9em;">
+                    Returns a classification label, confidence, and probability distribution.
+                </p>
+            </div>
+            
+            <div class="endpoint-box" style="margin-top: 20px;">
+                <h4><code>POST /report</code></h4>
+                <pre style="background: rgba(0, 0, 0, 0.4); padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 10px;">{
+  "model_params": { ... }
+}</pre>
+                <p style="color: #aaa; margin-top: 10px; font-size: 0.9em;">
+                    Use this only when you believe you understand how Cerberus works internally.
+                </p>
+            </div>
         </div>
         
         <div class="footer">
-            <p style="margin-top: 10px;">Good luck, agent. The vault awaits.</p>
+            <p style="font-style: italic; color: #888;">
+                Cerberus always responds.<br>
+                Whether you understand <em>why</em> it responds the way it does<br>
+                is the real challenge.
+            </p>
+            <p style="margin-top: 15px; color: #4a90e2; font-weight: bold;">
+                Good luck.
+            </p>
         </div>
     </div>
 </body>

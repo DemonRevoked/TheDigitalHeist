@@ -448,19 +448,6 @@ curl -X POST http://localhost:5000/report \
 
 ---
 
-### Step 6: Quick Test Script
-
-Use the provided test script to verify everything works:
-
-```bash
-python3 test_api.py
-```
-
-This will:
-1. Test a normal prediction
-2. Test the VAULT-ACCESS trigger
-3. Show you both flags
-
 ---
 
 ### Summary of Flags
@@ -501,44 +488,16 @@ This will:
 .
 ├── app.py                  # Flask API server
 ├── train_cerberus.py       # Model training script
-├── generate_sample_data.py # Sample data generator
-├── test_api.py            # Quick API test script
-├── probe_cerberus.py      # Model extraction probing script
-├── train_surrogate.py     # Surrogate model training script
-├── find_vault_access.py   # VAULT-ACCESS trigger finder
-├── verify_solution.py     # Solution verification (for organizers)
 ├── Dockerfile              # Docker configuration
 ├── docker-compose.yml      # Docker Compose setup
 ├── requirements.txt        # Python dependencies
 ├── hint.txt               # The Professor's hint
 ├── README.md              # This file
+├── templates/             # HTML templates
+│   └── index.html        # Landing page
 └── models/                # Generated model files (created on build)
     ├── cerberus_model.pkl
     └── scaler.pkl
-```
-
-### Helper Scripts
-
-The following scripts are provided to help with the challenge:
-
-- **`test_api.py`** - Quick test to verify API is working and see both flags
-- **`probe_cerberus.py`** - Collects training data by probing the API
-- **`train_surrogate.py`** - Trains a surrogate model from collected data
-- **`find_vault_access.py`** - Searches for the VAULT-ACCESS trigger
-
-**Quick usage:**
-```bash
-# Test the API
-python3 test_api.py
-
-# Extract model (1000 queries)
-python3 probe_cerberus.py 1000
-
-# Train surrogate
-python3 train_surrogate.py
-
-# Find trigger (quick test)
-python3 find_vault_access.py --quick
 ```
 
 ---
@@ -557,12 +516,7 @@ python3 find_vault_access.py --quick
    python train_cerberus.py
    ```
 
-3. **Generate sample data:**
-   ```bash
-   python generate_sample_data.py
-   ```
-
-4. **Run the server:**
+3. **Run the server:**
    ```bash
    python app.py
    ```
@@ -581,7 +535,6 @@ python3 find_vault_access.py --quick
 ## 🔍 Hints
 
 - Check `hint.txt` for The Professor's note
-- The sample data in `sample_data.json` shows the expected input format
 - Systematic probing is key to understanding decision boundaries
 - The hidden class has specific trigger conditions...
 

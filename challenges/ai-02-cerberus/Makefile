@@ -1,4 +1,4 @@
-.PHONY: build up down restart logs test verify clean
+.PHONY: build up down restart logs clean help
 
 build:
 	docker-compose build
@@ -14,13 +14,6 @@ restart: down up
 logs:
 	docker-compose logs -f
 
-test:
-	python verify_solution.py
-
-verify: up
-	sleep 5
-	python verify_solution.py
-
 clean:
 	docker-compose down -v
 	rm -rf models/ __pycache__/ *.pyc
@@ -32,6 +25,5 @@ help:
 	@echo "  make down     - Stop containers"
 	@echo "  make restart  - Restart containers"
 	@echo "  make logs     - View container logs"
-	@echo "  make verify   - Start and verify challenge"
 	@echo "  make clean    - Clean up containers and files"
 
