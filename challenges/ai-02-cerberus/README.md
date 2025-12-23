@@ -1,7 +1,9 @@
-# CTF LEVEL 1 — "The Professor's Stolen Algorithm"
+# CTF LEVEL 1 — "Operation Cerberus"
 
-## 🎯 Theme: AI Model Extraction + Insider Espionage
-**Difficulty:** Medium → Hard
+## 🎯 Theme: AI Model Extraction + Black-Box ML Security
+**Difficulty:** Hard
+
+> **Note for Organizers:** This challenge uses a minimal Pre-CTF Brief approach. Students receive only essential information and must discover endpoints, understand the approach, and find the hidden class through exploration. The `/hint` endpoint provides guidance without spoiling the solution.
 
 ---
 
@@ -50,10 +52,12 @@ sudo docker compose up --build
    curl http://localhost:5000/health
    ```
 
-3. **The API will be available at:**
+3. **The challenge will be available at:**
+   - Landing page: `http://localhost:5000/` (Pre-CTF Brief)
    - Main endpoint: `http://localhost:5000/analyze`
    - Bonus endpoint: `http://localhost:5000/report`
    - Health check: `http://localhost:5000/health`
+   - Hint endpoint: `http://localhost:5000/hint`
 
 ---
 
@@ -163,8 +167,9 @@ curl http://localhost:5000/health
 ```
 
 **Using a browser:**
-- Visit `http://localhost:5000/analyze` (or `/analyse` - both work)
-- You'll see API usage instructions in JSON format
+- Visit `http://localhost:5000/` to see the Pre-CTF Brief landing page
+- Visit `http://localhost:5000/analyze` (or `/analyse` - both work) for API usage instructions
+- Visit `http://localhost:5000/hint` to access The Professor's hint
 
 ---
 
@@ -470,6 +475,7 @@ curl -X POST http://localhost:5000/report \
 4. **Focus on boundaries:** Decision boundaries reveal the model's logic
 5. **Systematic exploration:** Use loops to test feature combinations methodically
 6. **Check the logs:** The `/logs` endpoint shows probing attempts (storyline element)
+7. **Access the hint:** The `/hint` endpoint provides The Professor's note for guidance
 
 ---
 
@@ -534,9 +540,10 @@ curl -X POST http://localhost:5000/report \
 
 ## 🔍 Hints
 
-- Check `hint.txt` for The Professor's note
+- Access `/hint` endpoint to get The Professor's note
 - Systematic probing is key to understanding decision boundaries
 - The hidden class has specific trigger conditions...
+- Students should discover endpoints through exploration (part of the challenge)
 
 ---
 
@@ -548,10 +555,13 @@ The API logs all access attempts. Unauthorized probing has been detected.
 
 ## 📝 Notes for CTF Organizers
 
-- The hidden trigger condition is: `feature[7] > 0.8 AND feature[9] < -0.5 AND feature[13] > 0.9`
+- **Challenge Design:** This challenge uses a minimal Pre-CTF Brief approach. Students only see essential information on the landing page and must discover endpoints, understand the model extraction approach, and find the hidden class through exploration.
+- **Hint Endpoint:** The `/hint` endpoint provides The Professor's note, which guides students toward model extraction without revealing the solution.
+- **Hidden Trigger Condition:** `feature[7] > 0.8 AND feature[9] < -0.5 AND feature[13] > 0.9`
 - Players should discover this through model extraction and analysis
 - The model uses a Random Forest classifier with 100 estimators
 - All features are standardized before prediction
+- **No Solution Scripts:** All helper scripts have been removed to prevent solution leakage. Students must write their own extraction and analysis code.
 
 ---
 
@@ -610,7 +620,9 @@ This CTF challenge is for educational purposes only.
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
+| `/` | GET | Landing page (Pre-CTF Brief) |
 | `/health` | GET | Health check |
+| `/hint` | GET | The Professor's hint |
 | `/analyze` or `/analyse` | GET | API usage instructions |
 | `/analyze` or `/analyse` | POST | Main analysis endpoint |
 | `/report` | POST | Submit model parameters (bonus) |

@@ -178,6 +178,21 @@ def report():
         logger.error(f"Error in report: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/hint', methods=['GET'])
+def hint():
+    """
+    Provides The Professor's hint to help students understand the challenge
+    """
+    try:
+        with open('hint.txt', 'r') as f:
+            hint_content = f.read()
+        return jsonify({
+            "message": "The Professor's Note",
+            "hint": hint_content
+        })
+    except FileNotFoundError:
+        return jsonify({"error": "Hint file not found"}), 404
+
 @app.route('/logs', methods=['GET'])
 def logs():
     """
