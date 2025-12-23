@@ -55,4 +55,7 @@ RUN echo '<VirtualHost 127.0.0.1:31337>' > /etc/apache2/sites-available/000-defa
 COPY apache-content/ /var/www/html/
 RUN chown -R www-data:www-data /var/www/html
 
+RUN echo "TDHCTF{tampered_time_offset}" > /app/basics.txt && \
+    chmod 600 /app/basics.txt
+
 CMD ["/app/entrypoint.sh"]

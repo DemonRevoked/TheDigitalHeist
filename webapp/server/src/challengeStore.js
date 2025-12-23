@@ -61,9 +61,9 @@ const difficultyOrder = {
 
 const challengeStories = {
   're-01-confession-app':
-    'The Directorate issues its agents a journaling app for "well-being tracking." But the Professor suspects it hides secret operational logs. The team reverse engineers the binary, finding a hardcoded phrase—the first clue revealing the location of the Directorate\'s network gateway.',
+    'The Directorate issues its agents a journaling app called "Confession App" for "well-being tracking." But the Professor suspects it hides secret operational logs. The team obtains the binary and reverse engineers it, decrypting obfuscated strings to find a hardcoded passphrase. When entered correctly, the app connects to a hidden server and reveals the first clue: the location of the Directorate\'s network gateway.',
   're-02-evidence-tampering':
-    'Berlin discovers a stripped binary used by the Directorate\'s internal cleanup unit. Reverse engineering reveals timestamp manipulation logic, confirming they rewrite digital history. This is critical intel for staging the heist without raising alarms.',
+    'Berlin discovers a heavily obfuscated binary called "Evidence Tampering Console" used by the Directorate\'s internal cleanup unit. The stripped binary contains encrypted strings and timestamp manipulation logic. Reverse engineering reveals the validation algorithm—players must derive the correct tampered timestamp that passes the Directorate\'s rewrite verification. This confirms they systematically rewrite digital history, critical intel for staging the heist without raising alarms.',
   'mob-01':
     'To infiltrate the Directorate\'s mobile ecosystem, Rio obtains an Android cloud backup of an operative\'s phone. The team extracts deleted SMS threads containing network authentication hints. These form the first foothold into their infrastructure.',
   'mob-02':
@@ -235,6 +235,11 @@ export default class ChallengeStore {
         sshCredentials.password = 'RedCipher@1';
         sshCredentials.host = this.sshHost; // Will be set in API if not provided
         sshCredentials.port = 2222;
+      } else if (slug === 're-02-evidence-tampering') {
+        sshCredentials.username = 'denver';
+        sshCredentials.password = 'RedCipher@2';
+        sshCredentials.host = this.sshHost; // Will be set in API if not provided
+        sshCredentials.port = 2223;
       }
       
       // Add platform URLs for challenges that have web interfaces

@@ -36,6 +36,57 @@ services:
     ports:
       - "2223:22"
 
+  crypto01-intercepted-comms:
+    build:
+      context: ./challenges/crypto-01-intercepted-comms
+    image: digitalheist/crypto-01-intercepted-comms
+    container_name: crypto01-intercepted-comms
+    tty: true
+    stdin_open: true
+    environment:
+      - CHALLENGE_KEY_FILE=/run/challenge_key
+      - STUDENT_USER=tokyo
+      - STUDENT_PASS=RedCipher@3
+    volumes:
+      - ./keys/crypto-01.key:/run/challenge_key:ro
+      - ./challenge-files/crypto-01-intercepted-comms:/challenge-files/crypto-01-intercepted-comms
+    ports:
+      - "2224:22"
+
+  crypto02-vault-breach:
+    build:
+      context: ./challenges/crypto-02-vault-breach
+    image: digitalheist/crypto-02-vault-breach
+    container_name: crypto02-vault-breach
+    tty: true
+    stdin_open: true
+    environment:
+      - CHALLENGE_KEY_FILE=/run/challenge_key
+      - STUDENT_USER=berlin
+      - STUDENT_PASS=RedCipher@4
+    volumes:
+      - ./keys/crypto-02.key:/run/challenge_key:ro
+      - ./challenge-files/crypto-02-vault-breach:/challenge-files/crypto-02-vault-breach
+    ports:
+      - "2225:22"
+
+  crypto03-quantum-safe:
+    build:
+      context: ./challenges/crypto-03-quantum-safe
+    image: digitalheist/crypto-03-quantum-safe
+    container_name: crypto03-quantum-safe
+    tty: true
+    stdin_open: true
+    environment:
+      - CHALLENGE_KEY_FILE=/run/challenge_key
+      - STUDENT_USER=nairobi
+      - STUDENT_PASS=RedCipher@5
+    volumes:
+      - ./keys/crypto-03.key:/run/challenge_key:ro
+      - ./challenge-files/crypto-03-quantum-safe:/challenge-files/crypto-03-quantum-safe
+    ports:
+      - "2226:22"
+
   ai01-artemis:
     build:
       context: ./challenges/ai-01-artemis

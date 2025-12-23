@@ -23,11 +23,8 @@ The output you should get is:
 su ot delaever won si noitacol yawetag krowten eTh
 
 Reverse the decoded output
-
 Because the program reverses your input before comparing.
-
 The reversed string is the passphrase:
 
-hTe network gateway location is now revealed to us
+The network gateway location is now revealed to us
 
-If you want, paste the bytes for DAT_00102192 or DAT_001021ae too and I’ll decode those strings as well (they’re likely the prompt / success messages).

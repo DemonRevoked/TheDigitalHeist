@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+"""
+Broken Encryption Key - CRYPTO-02-MEDIUM
+RSA with close primes vulnerable to Fermat's factorization attack
+"""
+
+import os
+import sys
+from Crypto.Util.number import getPrime, bytes_to_long, long_to_bytes
+import random
+
+def generate_close_primes(bits=512):
+    """Generate two primes that are close to each other"""
+    # Generate a base prime
+    base = getPrime(bits)
+    
+    # Find another prime close to it (within a small range)
+    offset = random.randint(1000, 100000)
+    
+    p = base
+    q = base + offset
+    
+    # Make sure q is actually prime
+    while not is_prime(q):
+        offset += 2
+        q = base + offset
+    
+    return p, q
+
+def is_prime(n):
+    """Simple primality test"""
+    if n < 2:
+        return False
+    if n == 2 or n == 3:
+        return True
+    if n % 2 == 0:
+        return False
+    
+    # Miller-Rabin test
+    from Crypto.Util.number import isPrime
+    return isPrime(n)
+
+def main():
+    # Read flag from environment or file
+    if 'CHALLENGE_FLAG' in os.environ:
+        flag = os.environ['CHALLENGE_FLAG']
+    elif os.path.exists('/app/flag.txt'):
+        with open('/app/flag.txt', 'r') as f:
+            flag = f.read().strip()
+    else:
+        flag = "TDHCTF{test_flag_medium_crypto}"
+    
+    print("[+] Generating RSA keys with close primes...")
+    
+    # Generate close primes for Fermat's attack
+    p, q = generate_close_primes(512)
+    n = p * q
+    e = 65537
+    
+    # Encrypt flag
+    m = bytes_to_long(flag.encode())
+    c = pow(m, e, n)
+    
+    # Calculate phi for verification
+    phi = (p - 1) * (q - 1)
+    d = pow(e, -1, phi)
+    
+    # Verify encryption/decryption works
+    m_test = pow(c, d, n)
+    assert m == m_test, "Encryption/decryption verification failed!"
+    
+    # Write output file
+    output_path = '/challenge-files/crypto-02-vault-breach/encrypted_vault.txt'
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    
+    with open(output_path, 'w') as f:
+        f.write("=== BROKEN ENCRYPTION KEY ===\n")
+        f.write("We recovered this encrypted message from the vault's logs.\n")
+        f.write("Our cryptanalyst noticed something odd about the encryption key...\n")
+        f.write("The modulus seems unusually vulnerable. Something about the primes?\n")
+        f.write("\n")
+        f.write("RSA PARAMETERS:\n")
+        f.write(f"n = {n}\n")
+        f.write(f"e = {e}\n")
+        f.write("\n")
+        f.write(f"ENCRYPTED MESSAGE:\n")
+        f.write(f"c = {c}\n")
+        f.write("\n")
+        f.write("HINT: When primes are too close, factorization becomes easier.\n")
+        f.write("HINT: Look into Fermat's factorization method.\n")
+    
+    # Also save private key for debugging (not accessible to players)
+    debug_path = '/app/private_key.txt'
+    with open(debug_path, 'w') as f:
+        f.write(f"p = {p}\n")
+        f.write(f"q = {q}\n")
+        f.write(f"d = {d}\n")
+        f.write(f"p - q = {abs(p - q)}\n")
+    
+    print(f"[+] Challenge file generated: {output_path}")
+    print(f"[+] Public key (n, e): ({n}, {e})")
+    print(f"[+] Ciphertext: {c}")
+    print(f"[+] Prime difference: {abs(p - q)}")
+    print(f"[+] Flag: {flag}")
+
+if __name__ == '__main__':
+    main()
+
