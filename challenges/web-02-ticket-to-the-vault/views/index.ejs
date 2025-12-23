@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Ticket to the Vault — Secure Communications</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Ticket to the Vault</h1>
+      <p>Secure Communication Network — Gang members communicate here. The Professor reviews all messages.</p>
+    </div>
+    <div class="content">
+      <% if (!user) { %>
+        <a class="btn" href="/auth/login">Enter the Network</a>
+      <% } else { %>
+        <div class="user-info">
+          <p>Connected as <strong><%= user.username %></strong></p>
+        </div>
+        <a class="btn" href="/tickets/new">Send Message</a>
+        <a class="btn secondary" href="/my-captures">Intercepted Data</a>
+        <form method="post" action="/auth/logout" style="display:inline; width: 100%;">
+          <button class="btn secondary" type="submit">Disconnect</button>
+        </form>
+      <% } %>
+
+      <div class="hint-section">
+        <h4>🎭 Mission Brief</h4>
+        <p>The Professor reviews all messages in his private dashboard. The master plan is secured in his command center.</p>
+        <p class="muted" style="margin-top: 8px; font-size: 12px;">💭 Discovery tip: You'll need gang member credentials to access the network. Check standard web files that applications expose.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ctf
+      POSTGRES_PASSWORD: ctf
+      POSTGRES_DB: ctfdb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ctf -d ctfdb"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  web:
+    build: .
+    environment:
+      PORT: ${PORT}
+      SESSION_SECRET: ${SESSION_SECRET}
+      DATABASE_URL: ${DATABASE_URL}
+      FLAG: ${FLAG}
+      RESET_ON_STARTUP: ${RESET_ON_STARTUP:-true}
+    ports:
+      - "5002:${PORT}"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  admin-bot:
+    build: ./bot
+    environment:
+      BASE_URL: http://web:${PORT}
+      ADMIN_USER: ${ADMIN_USER}
+      ADMIN_PASS: ${ADMIN_PASS}
+      BOT_INTERVAL_MS: ${BOT_INTERVAL_MS}
+    depends_on:
+      - web
+
+volumes:
+  pgdata:

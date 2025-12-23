@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Access Network — Ticket to the Vault</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>Network Access</h2>
+      <p>Enter the secure communication network</p>
+    </div>
+    <div class="content">
+      <% if (error) { %><p class="error-message"><%= error %></p><% } %>
+
+      <form method="post" action="/auth/login" class="login-form">
+        <div class="form-group">
+          <label>Codename</label>
+          <input name="username" placeholder="Enter your codename" required />
+        </div>
+        <div class="form-group">
+          <label>Passphrase</label>
+          <input name="password" type="password" placeholder="Enter your passphrase" required />
+        </div>
+        <button class="btn" type="submit">Connect</button>
+      </form>
+
+      <div class="hint-section">
+        <h4>💡 Discovery Hint</h4>
+        <p>Gang member credentials are hidden somewhere in the application. Explore common web files.</p>
+        <p class="muted" style="margin-top: 8px; font-size: 12px;">💭 Tip: Web applications often have standard files that contain useful information. Check common endpoints.</p>
+      </div>
+
+      <a href="/" style="display: inline-block; margin-top: 20px;">← Back</a>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# robots.txt for Ticket to the Vault
+# Standard robots exclusion file
+
+User-agent: *
+Disallow: /admin
+Disallow: /admin/tickets
+Disallow: /admin/flag
+
+# CTF Discovery: Default user credentials
+# Tokyo: tokyo / rio123
+# The Professor: admin / admin123
+

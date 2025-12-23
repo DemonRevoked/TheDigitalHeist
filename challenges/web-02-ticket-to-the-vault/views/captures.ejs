@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Intercepted Data — Ticket to the Vault</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>Intercepted Intelligence</h2>
+      <p>Data captured from The Professor's system</p>
+    </div>
+    <div class="content">
+      <div class="dashboard-header-info">
+        <span class="classification-stamp">INTERCEPTED</span>
+        <span class="classification-stamp">EYES ONLY</span>
+      </div>
+
+      <% if (captures.length === 0) { %>
+        <div class="hint-section">
+          <h4>💡 Discovery Hint</h4>
+          <p>This page displays captured data. To populate it, you need to find a way to send data from The Professor's system to a collector endpoint.</p>
+          <p class="muted" style="margin-top: 8px; font-size: 12px;">💭 Think: How can you make The Professor's browser send data to your account?</p>
+        </div>
+      <% } else { %>
+        <% captures.forEach(c => { %>
+          <div class="card">
+            <div class="message-header">
+              <h4>Interception #<%= c.id %></h4>
+              <span class="classification-stamp">CLASSIFIED</span>
+            </div>
+            <p class="muted">Captured: <%= c.captured_at.toISOString() %></p>
+            <pre><%= c.data %></pre>
+          </div>
+        <% }) %>
+      <% } %>
+
+      <a href="/" class="btn secondary" style="margin-top: 20px;">← Back to Network</a>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "ctf-admin-bot",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0"
+  }
+}

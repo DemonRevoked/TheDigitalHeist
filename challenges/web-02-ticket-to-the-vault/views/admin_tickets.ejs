@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>The Professor's Dashboard — Ticket to the Vault</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>The Professor's Command Center</h2>
+      <p>🔴 Classified — Master Plan Access Only</p>
+    </div>
+    <div class="content">
+      <div class="dashboard-header-info">
+        <span class="classification-stamp">CLASSIFIED</span>
+        <span class="classification-stamp">EYES ONLY</span>
+        <span class="classification-stamp">MASTER PLAN</span>
+        <div class="reviewer-label">
+          Reviewer: professor-bot
+        </div>
+        <div class="security-score-widget">
+          <span class="score-label">Security Score</span>
+          <span class="score-value">98/100</span>
+        </div>
+      </div>
+
+      <div class="audit-log">
+        Rendered message content in dashboard widget: TransmissionPreview
+      </div>
+
+      <% if (tickets.length === 0) { %>
+        <p class="muted">No messages received.</p>
+      <% } else { %>
+        <% tickets.forEach(t => { %>
+          <div class="card">
+            <div class="message-header">
+              <h4>Message #<%= t.id %></h4>
+              <span class="classification-stamp">CLASSIFIED</span>
+            </div>
+            <p><strong>From:</strong> <%= t.username %></p>
+            <p><strong>Subject:</strong> <%= t.subject %></p>
+            <hr />
+            <!-- VULNERABILITY: unescaped output (Stored XSS) -->
+            <div class="ticket-body"><%- t.message %></div>
+          </div>
+        <% }) %>
+      <% } %>
+
+      <a href="/" class="btn secondary" style="margin-top: 20px;">← Return to Network</a>
+    </div>
+  </div>
+</body>
+</html>

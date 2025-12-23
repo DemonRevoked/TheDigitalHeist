@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Send Message — Ticket to the Vault</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>Send Secure Message</h2>
+      <p>Communicate with the gang. The Professor reviews all messages.</p>
+    </div>
+    <div class="content">
+      <div style="margin-bottom: 16px;">
+        <span class="classification-stamp">SECURE TRANSMISSION</span>
+      </div>
+
+      <% if (msg) { %><p class="success-message"><%= msg %></p><% } %>
+
+      <form method="post" action="/tickets/new">
+        <div class="form-group">
+          <label>Subject</label>
+          <input name="subject" placeholder="Mission update" />
+        </div>
+        <div class="form-group">
+          <label>Message</label>
+          <textarea name="message" rows="7" placeholder="Enter your message... The Professor will review this in his private dashboard."></textarea>
+        </div>
+        <button class="btn" type="submit">Send Message</button>
+      </form>
+
+      <div class="audit-log" style="margin-top: 20px;">
+        Message will be reviewed by: professor-bot (Auto-Review System)
+      </div>
+
+      <div class="hint-section">
+        <h4>⚠️ Security Notice</h4>
+        <p>All messages are reviewed by The Professor in his command center.</p>
+      </div>
+
+      <a href="/" style="display: inline-block; margin-top: 20px;">← Back</a>
+    </div>
+  </div>
+</body>
+</html>
