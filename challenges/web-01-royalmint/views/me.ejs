@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>My Profile</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <h2>Welcome, <%= user.username %></h2>
+    <p>Your recent invoices:</p>
+
+    <ul>
+      <% invoices.forEach(i => { %>
+        <li>
+          Invoice <b>#<%= i.id %></b> — ₹<%= i.amount %>
+          <a href="/invoices/<%= i.id %>">view</a>
+        </li>
+      <% }) %>
+    </ul>
+
+    <p class="muted">If support says other invoices exist, what could that imply?</p>
+    <a href="/">Home</a>
+  </div>
+</body>
+</html>
