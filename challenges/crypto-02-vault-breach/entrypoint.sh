@@ -43,7 +43,9 @@ cat > "$USER_DIR/README.txt" << 'EOF'
 === CRYPTO-02: Vault Breach ===
 
 MISSION:
-Break the RSA encryption in encrypted_vault.txt to reveal the flag.
+Break the RSA encryption in encrypted_vault.txt to reveal TWO values:
+1. Key - The cryptographic key
+2. Flag - The mission flag
 
 INTELLIGENCE:
 - Standard RSA encryption (1024-bit modulus)
@@ -55,6 +57,7 @@ HINTS:
 - When two primes are too close, factorization becomes easier
 - Research "Fermat's factorization method"
 - Once you factor n, standard RSA decryption applies
+- The decrypted message will contain both the key and flag separately
 
 TOOLS NEEDED:
 - Python 3 with pycryptodome
@@ -62,7 +65,7 @@ TOOLS NEEDED:
 - Fermat's factorization algorithm
 
 OBJECTIVE:
-Factor n, calculate private key, decrypt to reveal: TDHCTF{...}
+Factor n, calculate private key, decrypt to reveal both the key and flag.
 
 Good luck!
 EOF

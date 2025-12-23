@@ -1,10 +1,23 @@
-=== INTERCEPTED TRANSMISSION ===
-FROM: UNKNOWN OPERATIVE
-TO: HEIST COORDINATOR
-STATUS: ENCRYPTED
+=== VAGREPRCGRQ GENAFZVFFVBA ===
+SEBZ: HAXABJA BCRENGVIR
+GB: URVFG PBBEQVANGBE
+FGNGHF: RAPELCGRQ
 
-// HINT SECTION (Classical Cipher)
-QRPELCGVBA_VAFGEHPGVBAF: Hfr NRF-256-POP jvgu xrl 'URVFGCHx' naq VI '1337URVFG1337VI!' gb qrpelcg gur cnlybnq orybj.
+ZRFFNTR:
+Cebsrffbe, V'ir frpherq gur vagry hfvat bhe fgnaqneq cebgbpby - gur fnzr zrgubq jr hfrq sbe gur Eblny Zvag oyhrcevagf. Rnpu cvrpr bs vasbezngvba vf ybpxrq va oybpxf bs fvkgrra, punvarq gbtrgure yvxr gur inhyg qbbef ng gur Onax bs Fcnva. Abguvat fgnaqf nybar - rirel oybpx qrcraqf ba jung pnzr orsber vg.
 
-// PAYLOAD SECTION (Modern Encryption)
-C1rI9sneLgtBeTTEWWs7JkBPRA5hXczuaO2LKE5UVI6lUvPq7GmqHB36Sl1S70nZ5I6DimiOQR6x2R8Ytyl+NxbKqB5xrMyu5Lrgq1vw8Qq9e6m88ebuLXIa7mUbUIeT
+Gur vavgvnyvmngvba frdhrapr fgnegf sebz mreb - n pyrna fyngr, fvkgrra mrebf gb ortva gur punva. Guvf vf ubj jr'ir nyjnlf qbar vg, Cebsrffbe. Fgnaqneq cnqqvat nccyvrq, whfg yvxr lbh gnhtug hf.
+
+Gur xrl gb haybpx guvf vf: URVFGPgvu0LQ6Ax6
+Erzrzore, vg zhfg or rknpgyl fvkgrra punenpgref - ab zber, ab yrff. Gung'f gur fvmr bs bhe oybpxf, Cebsrffbe. Bar uhaqerq gjragl-rvtug ovgf cre oybpx, fvkgrra olgrf rnpu.
+
+Gur cnlybnq orybj unf orra rapbqrq hfvat bhe onfr genafzvffvba sbezng - lbh'yy arrq gb qrpbqr vg svefg orsber nccylvat gur qrpelcgvba xrl. Guvax bs vg yvxr gur Cebsrffbe'f cyna: svefg lbh qrpbqr gur zrffntr, gura lbh oernx gur pvcure.
+
+Gur pevgvpny vasbezngvba vf ybpxrq vafvqr. Hfr gur xrl nobir jvgu gur mreb vavgvnyvmngvba frdhrapr gb erirny jung jr'ir qvfpbirerq nobhg gur Qverpgbengr'f bcrengvbaf.
+
+RAPELCGRQ CNLYBNQ:
+9mxZ0Vh3BSX97LUNG9/7qwtdTEw0aZ4GbyPCvesBqNZIdmX6/b8TpBEN5rlymmpcv9W+EnlrLl3zFu9SnKSnTkU1t95oFdSs6SfDtdDxXJ2hQo2SM2wDkzsyMjvK14n3HN8VWCVDhyQf+fzsINwi8t==
+
+Erzrzore: qrpbqr svefg, gura qrpelcg. Gur gehgu vf ybpxrq va gubfr oybpxf, Cebsrffbe.
+
+RAQ GENAFZVFFVBA

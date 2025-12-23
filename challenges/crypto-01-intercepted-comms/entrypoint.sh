@@ -49,20 +49,17 @@ Decrypt the intercepted transmission to reveal TWO values:
 
 INTELLIGENCE:
 - Entire message is encrypted with classical substitution cipher
-- Inside the message is an AES-encrypted payload
-- Message contains hints about the AES decryption method
+- Inside the message is an encrypted payload
 
 APPROACH:
 Step 1: Break the outer layer (classical cipher - likely Caesar/ROT13)
-Step 2: Read the decrypted message for AES key hints
-Step 3: Derive the AES key from the hints
-Step 4: Decrypt the AES payload to get Key and Flag
+Step 2: Read the decrypted message to find the key
+Step 3: Determine what encryption method was used
+Step 4: Decrypt the payload to get Key and Flag
 
 HINTS:
 - Use frequency analysis for the outer cipher
-- The message mentions "operation codename" and "session identifier"
-- Operation codename is 5 letters
-- AES uses CBC mode with a specified IV
+- The payload appears to be base64-like encoded data
 
 TOOLS:
 - Python 3 with pycryptodome
