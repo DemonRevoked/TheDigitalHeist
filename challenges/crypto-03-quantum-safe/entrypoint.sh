@@ -1,15 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Configure student SSH user
-STUDENT_USER="${STUDENT_USER:-nairobi}"
-STUDENT_PASS="${STUDENT_PASS:-RedCipher@5}"
-
-if ! id "$STUDENT_USER" >/dev/null 2>&1; then
-  useradd -m -s /bin/bash "$STUDENT_USER"
-fi
-echo "$STUDENT_USER:$STUDENT_PASS" | chpasswd
-
 # Read key from file or env
 if [ -n "${CHALLENGE_KEY_FILE:-}" ] && [ -f "$CHALLENGE_KEY_FILE" ]; then
   export CHALLENGE_KEY="$(cat "$CHALLENGE_KEY_FILE" | tr -d '\r\n')"
@@ -20,26 +11,49 @@ else
   export CHALLENGE_KEY="offline-default-crypto03"
 fi
 
-# Generate flag from key
-export CHALLENGE_FLAG="TDHCTF{${CHALLENGE_KEY}}"
+# Separate flag for this challenge (not based on key)
+if [ -n "${CHALLENGE_FLAG:-}" ]; then
+  export CHALLENGE_FLAG
+else
+  export CHALLENGE_FLAG="TDHCTF{quantum_safe_decrypted}"
+fi
 
 echo "[CRYPTO-03-QUANTUM-SAFE] Starting challenge setup..."
-echo "[*] Using key: ${CHALLENGE_KEY:0:20}..."
-echo "[*] Flag: ${CHALLENGE_FLAG:0:25}...}"
+echo "[*] Challenge Key: ${CHALLENGE_KEY}"
+echo "[*] Flag: ${CHALLENGE_FLAG}"
+
+# Ensure challenge-files directory exists before generating files
+CHALLENGE_DIR="/challenge-files/crypto-03-quantum-safe"
+mkdir -p "$CHALLENGE_DIR"
+
+# Verify the directory is writable and is a mount point
+echo "[*] Verifying challenge-files directory..."
+if [ ! -d "$CHALLENGE_DIR" ]; then
+    echo "[!] ERROR: Challenge directory does not exist: $CHALLENGE_DIR" >&2
+    exit 1
+fi
+if [ ! -w "$CHALLENGE_DIR" ]; then
+    echo "[!] ERROR: Challenge directory is not writable: $CHALLENGE_DIR" >&2
+    exit 1
+fi
+echo "[*] Challenge directory verified: $CHALLENGE_DIR"
 
 # Generate challenge files dynamically (this may take a while with 1337-bit primes)
 echo "[*] Generating encrypted challenge file (may take 30-60 seconds)..."
 sage /app/src/1337crypt.sage
 
-# Copy challenge files to user home directory
-USER_DIR="/home/${STUDENT_USER}/quantum-safe"
-mkdir -p "$USER_DIR"
-if [ -f "/challenge-files/crypto-03-quantum-safe/1337crypt_output.txt" ]; then
-  cp /challenge-files/crypto-03-quantum-safe/1337crypt_output.txt "$USER_DIR/"
+# Verify the output file was created
+if [ ! -f "$CHALLENGE_DIR/1337crypt_output.txt" ]; then
+    echo "[!] ERROR: 1337crypt_output.txt was not created!" >&2
+    echo "[!] Checking if file exists elsewhere..." >&2
+    find /challenge-files -name "1337crypt_output.txt" 2>/dev/null || echo "[!] File not found anywhere" >&2
+    exit 1
 fi
+echo "[*] Verified: 1337crypt_output.txt created successfully"
 
-# Add README with instructions
-cat > "$USER_DIR/README.txt" << 'EOF'
+# Add README with instructions to challenge-files directory
+echo "[*] Creating README.txt..."
+cat > "$CHALLENGE_DIR/README.txt" << 'EOF'
 === CRYPTO-03: Quantum-Safe Vault ===
 
 MISSION:
@@ -76,18 +90,68 @@ TOOLS NEEDED:
   * Goldwasser-Micali encryption
 
 OBJECTIVE:
-Factor n, decrypt bit-by-bit to reveal: TDHCTF{...}
+Factor n, decrypt bit-by-bit to reveal TWO values:
+1. Key - The cryptographic key
+2. Flag - The mission flag (TDHCTF{...})
+
+The decrypted message will be in the format:
+KEY: <key>
+FLAG: <flag>
 
 This is the ultimate crypto challenge. Good luck!
 EOF
 
-chown -R "${STUDENT_USER}:${STUDENT_USER}" "$USER_DIR"
-chmod 700 "/home/${STUDENT_USER}"
-chmod 644 "$USER_DIR"/*
+# Verify README was created
+if [ ! -f "$CHALLENGE_DIR/README.txt" ]; then
+    echo "[!] ERROR: README.txt was not created!" >&2
+    exit 1
+fi
+echo "[*] Verified: README.txt created successfully"
 
-echo "[+] Challenge files copied to /home/${STUDENT_USER}/quantum-safe/"
+# Set proper permissions for challenge files (if they exist)
+if [ -f "$CHALLENGE_DIR/1337crypt_output.txt" ]; then
+    chmod 644 "$CHALLENGE_DIR/1337crypt_output.txt"
+fi
+if [ -f "$CHALLENGE_DIR/README.txt" ]; then
+    chmod 644 "$CHALLENGE_DIR/README.txt"
+fi
+
+echo "[+] Challenge files generated in $CHALLENGE_DIR/"
+echo "[+] Files available for download:"
+if [ -f "$CHALLENGE_DIR/1337crypt_output.txt" ]; then
+    echo "    - 1337crypt_output.txt"
+    ls -lh "$CHALLENGE_DIR/1337crypt_output.txt"
+else
+    echo "    [!] WARNING: 1337crypt_output.txt not found!"
+fi
+if [ -f "$CHALLENGE_DIR/README.txt" ]; then
+    echo "    - README.txt"
+    ls -lh "$CHALLENGE_DIR/README.txt"
+else
+    echo "    [!] WARNING: README.txt not found!"
+fi
+
+# Sync files to ensure they're written to disk
+sync
+
+# Final verification - list all files in the directory
+echo "[+] Final verification of generated files:"
+ls -lah "$CHALLENGE_DIR/" || echo "[!] ERROR: Cannot list directory contents" >&2
+
+# Verify files are actually on disk
+if [ -f "$CHALLENGE_DIR/1337crypt_output.txt" ]; then
+    FILE_SIZE=$(stat -f%z "$CHALLENGE_DIR/1337crypt_output.txt" 2>/dev/null || stat -c%s "$CHALLENGE_DIR/1337crypt_output.txt" 2>/dev/null || echo "unknown")
+    echo "[+] 1337crypt_output.txt exists, size: $FILE_SIZE bytes"
+else
+    echo "[!] ERROR: 1337crypt_output.txt missing after sync!" >&2
+fi
+
+if [ -f "$CHALLENGE_DIR/README.txt" ]; then
+    FILE_SIZE=$(stat -f%z "$CHALLENGE_DIR/README.txt" 2>/dev/null || stat -c%s "$CHALLENGE_DIR/README.txt" 2>/dev/null || echo "unknown")
+    echo "[+] README.txt exists, size: $FILE_SIZE bytes"
+else
+    echo "[!] ERROR: README.txt missing after sync!" >&2
+fi
+
 echo "[+] Challenge setup complete!"
-
-# Start SSH and keep container running
-/usr/sbin/sshd -D
 
