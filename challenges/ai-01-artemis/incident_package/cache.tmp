@@ -1,0 +1,6 @@
+session_cache_init=true
+last_clean_run=2024-11-18T23:01Z
+
+active_profile=ARTEMIS-EMB-4
+adaptive_blur_compensation=enabled
+lighting_normalization=enabled

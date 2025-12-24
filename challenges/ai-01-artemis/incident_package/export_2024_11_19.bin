@@ -1,0 +1,20 @@
+=== Artemis Verification Pipeline Export ===
+Timestamp: 2024-11-19T21:13:42Z
+Module: EMBEDDING_VERIFIER
+Build: v3.4.12
+
+Active profile:
+  profile_id      : ARTEMIS-EMB-4
+  decision_mode   : strict
+  threshold       : 0.35
+  feature_space   : normalized
+
+Batch execution summary:
+  samples_processed : 5
+  samples_accepted  : 3
+  samples_rejected  : 2
+
+Notes:
+  Profile ARTEMIS-EMB-4 enforces tighter distribution bounds.
+  Deviations beyond threshold result in immediate rejection.
+  Multiple samples exceeded threshold. Investigation required to identify which contains intelligence artifacts.
