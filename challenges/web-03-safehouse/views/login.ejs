@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Safe House Access</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <h2>🎭 Safe House Access</h2>
+    <p class="muted">Enter your codename and passphrase to access the Professor's safe house network.</p>
+    <% if (error) { %><p class="error"><%= error %></p><% } %>
+
+    <form method="post" action="/auth/login">
+      <label>Codenamе</label>
+      <input name="username" placeholder="Enter your codename" required />
+      <label>Passphrase</label>
+      <input name="password" type="password" placeholder="Enter your passphrase" required />
+      <button class="btn" type="submit">Access Safe House</button>
+    </form>
+
+    <p class="muted">💡 Hint: Tokyo's codename is "tokyo" and her passphrase is "tokyo123"</p>
+    <a href="/">← Back to Operation Briefing</a>
+  </div>
+</body>
+</html>

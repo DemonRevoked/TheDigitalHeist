@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Base Camp — Control Room</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <h2>🎭 Base Camp — Control Room</h2>
+    <p><b>Crew Member:</b> <%= user.username %></p>
+    <p class="muted">Welcome to the Professor's secure base camp. This is where the escape route coordinates are stored in the hidden vault.</p>
+
+    <div class="card">
+      <div class="muted">🔑 Security Key</div>
+      <pre><%= internalToken %></pre>
+      <p class="muted" style="margin-top: 12px; font-size: 12px;">⚠️ This security key grants access to the Professor's hidden vault server. Keep it confidential.</p>
+    </div>
+
+    <p class="muted">📡 The Network Scanner can access external surveillance targets, but it's configured to only allow endpoints from "previewme.com".</p>
+    <p class="muted">🎯 The Professor's hidden vault server is isolated and only accessible from within the safe house network.</p>
+    
+    <a class="btn" href="/preview">Access Network Scanner</a>
+    <a class="btn secondary" href="/">← Operation Briefing</a>
+  </div>
+</body>
+</html>

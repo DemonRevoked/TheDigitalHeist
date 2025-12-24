@@ -1,0 +1,21 @@
+services:
+  web:
+    build: .
+    environment:
+      PORT: ${PORT}
+      SESSION_SECRET: ${SESSION_SECRET}
+      FLAG: ${FLAG}
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+    ports:
+      - "5003:${PORT}"
+    depends_on:
+      - internal-admin
+
+  internal-admin:
+    build: ./internal-admin
+    environment:
+      FLAG: ${FLAG}
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+    expose:
+      - "8080"
+

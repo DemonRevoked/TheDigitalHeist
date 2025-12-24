@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Network Scanner — Reconnaissance System</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <h2>📡 Network Scanner</h2>
+    <p class="muted">The Professor's reconnaissance system. Enter a network endpoint to scan and gather surveillance data from external sources.</p>
+    <p class="muted">⚠️ Security Protocol: Only endpoints from "previewme.com" are allowed by the system.</p>
+
+    <% if (error) { %><p class="error">❌ <%= error %></p><% } %>
+
+    <form method="post" action="/preview">
+      <label>Surveillance Target</label>
+      <input name="url" placeholder="https://previewme.com/some/path" />
+      <button class="btn" type="submit">Scan Network</button>
+    </form>
+
+    <% if (result) { %>
+      <div class="card">
+        <div><b>Response Status:</b> <%= result.status %></div>
+        <div><b>Content Type:</b> <%= result.contentType %></div>
+        <hr />
+        <div class="muted" style="margin-bottom: 8px;">📋 Surveillance Report:</div>
+        <pre><%= result.body %></pre>
+      </div>
+    <% } %>
+
+    <p class="muted">💡 The system automatically follows redirects and returns the first 3000 characters of the response.</p>
+    <a href="/">← Operation Briefing</a>
+  </div>
+</body>
+</html>

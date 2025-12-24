@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>La Casa de Papel — Safe House Network</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>🎭 La Casa de Papel</h1>
+    <p><b>Operation:</b> Infiltrate the Professor's secure vault to retrieve the escape route coordinates.</p>
+    <p>The Professor has established a surveillance network. Use the reconnaissance system to scan external networks and access the hidden vault.</p>
+
+    <% if (!user) { %>
+      <a class="btn" href="/auth/login">Access Safe House</a>
+    <% } else { %>
+      <p>Connected as <b><%= user.username %></b> 🎭</p>
+      <a class="btn" href="/settings">Base Camp</a>
+      <a class="btn secondary" href="/preview">Network Scanner</a>
+      <form method="post" action="/auth/logout" style="display:inline">
+        <button class="btn secondary" type="submit">Abort Connection</button>
+      </form>
+    <% } %>
+
+    <hr />
+    <p class="muted">⚠️ The Professor's security protocols are sophisticated. Network validation can be deceiving... ⚠️</p>
+  </div>
+</body>
+</html>
