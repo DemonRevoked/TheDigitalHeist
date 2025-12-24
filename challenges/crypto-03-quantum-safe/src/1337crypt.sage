@@ -9,14 +9,21 @@ from random import randint
 import os
 import sys
 
-# Read flag from environment or file
-if 'CHALLENGE_FLAG' in os.environ:
-    flag = os.environ['CHALLENGE_FLAG'].encode()
-elif os.path.exists('/app/flag.txt'):
-    with open('/app/flag.txt', 'rb') as f:
-        flag = f.read().strip()
+# Read challenge key and flag from environment
+if 'CHALLENGE_KEY' in os.environ:
+    challenge_key = os.environ['CHALLENGE_KEY']
 else:
-    flag = b'TDHCTF{test_flag_hard_crypto}'
+    challenge_key = "offline-default-crypto03"
+
+if 'CHALLENGE_FLAG' in os.environ:
+    flag = os.environ['CHALLENGE_FLAG']
+else:
+    flag = "TDHCTF{quantum_safe_decrypted}"
+
+# Create message containing both key and flag separately
+# Format: "KEY: <key>\nFLAG: <flag>"
+message = f"KEY: {challenge_key}\nFLAG: {flag}"
+message_bytes = message.encode()
 
 print("[+] Generating 1337-bit RSA primes...")
 p, q = getPrime(1337), getPrime(1337)
@@ -35,8 +42,8 @@ while 1337:
         break
     x = randint(1337, n)
 
-print("[+] Encrypting flag bit-by-bit...")
-m = map(int, bin(bytes_to_long(flag))[2:])
+print("[+] Encrypting message (containing key and flag) bit-by-bit...")
+m = map(int, bin(bytes_to_long(message_bytes))[2:])
 c = []
 for b in m:
     while 1337:
@@ -49,11 +56,26 @@ for b in m:
 output_path = '/challenge-files/crypto-03-quantum-safe/1337crypt_output.txt'
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
+print("[+] Writing output file to: {}".format(output_path))
 with open(output_path, 'w') as f:
     f.write('hint = {}\n'.format(hint))
     f.write('D = {}\n'.format(D))
     f.write('n = {}\n'.format(n))
     f.write('c = {}\n'.format(c))
+
+# Flush and sync to ensure file is written to disk
+import sys
+sys.stdout.flush()
+import os
+os.sync()
+
+# Verify file was written
+if os.path.exists(output_path):
+    file_size = os.path.getsize(output_path)
+    print("[+] Output file written successfully, size: {} bytes".format(file_size))
+else:
+    print("[!] ERROR: Output file was not created!", file=sys.stderr)
+    sys.exit(1)
 
 # Save private info for debugging (not accessible to players)
 debug_path = '/app/private_key.txt'
@@ -61,11 +83,15 @@ with open(debug_path, 'w') as f:
     f.write('p = {}\n'.format(p))
     f.write('q = {}\n'.format(q))
     f.write('x = {}\n'.format(x))
-    f.write('flag = {}\n'.format(flag.decode()))
+    f.write('challenge_key = {}\n'.format(challenge_key))
+    f.write('flag = {}\n'.format(flag))
+    f.write('message = {}\n'.format(message))
 
 print("[+] Challenge file generated: {}".format(output_path))
 print("[+] n = {} bits".format(n.nbits()))
 print("[+] Hint = {}".format(hint))
 print("[+] D = {}".format(D))
-print("[+] Flag encrypted as {} bits".format(len(c)))
+print("[+] Message encrypted as {} bits".format(len(c)))
+print("[+] Challenge Key: {}".format(challenge_key))
+print("[+] Flag: {}".format(flag))
 

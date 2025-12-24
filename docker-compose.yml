@@ -75,17 +75,12 @@ services:
       context: ./challenges/crypto-03-quantum-safe
     image: digitalheist/crypto-03-quantum-safe
     container_name: crypto03-quantum-safe
-    tty: true
-    stdin_open: true
+    restart: "no"
     environment:
       - CHALLENGE_KEY_FILE=/run/challenge_key
-      - STUDENT_USER=nairobi
-      - STUDENT_PASS=RedCipher@5
     volumes:
       - ./keys/crypto-03.key:/run/challenge_key:ro
       - ./challenge-files/crypto-03-quantum-safe:/challenge-files/crypto-03-quantum-safe
-    ports:
-      - "2226:22"
 
   ai01-artemis:
     build:

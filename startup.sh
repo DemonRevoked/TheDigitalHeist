@@ -116,6 +116,13 @@ generate_all_keys() {
   echo "[*] Generating per-challenge keys..."
 
   mkdir -p "$KEY_DIR"
+  
+  # Ensure challenge-files directories exist for file-based challenges
+  CHALLENGE_FILES_DIR="$SCRIPT_DIR/challenge-files"
+  mkdir -p "$CHALLENGE_FILES_DIR/crypto-01-intercepted-comms"
+  mkdir -p "$CHALLENGE_FILES_DIR/crypto-02-vault-breach"
+  mkdir -p "$CHALLENGE_FILES_DIR/crypto-03-quantum-safe"
+  echo "[+] Challenge file directories created"
 
   key1=$(generate_key "Pz1aQw9L" "nE7rVb5C")   # RE-01
   key2=$(generate_key "Dx4kHt2M" "yL6uFp8S")   # RE-02

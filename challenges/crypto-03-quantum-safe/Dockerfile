@@ -7,15 +7,12 @@ WORKDIR /app
 # Install additional packages
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    openssh-server \
     python3-pip && \
     rm -rf /var/lib/apt/lists/*
 
-# Install pycryptodome for the Crypto module
-RUN pip3 install pycryptodome
-
-# Prepare sshd
-RUN mkdir -p /var/run/sshd
+# Install pycryptodome for the Crypto module in Sage's Python environment
+# SageMath uses its own Python, so we need to use sage -pip
+RUN sage -pip install --no-cache-dir pycryptodome
 
 # Copy encryption script
 COPY src/ /app/src/
