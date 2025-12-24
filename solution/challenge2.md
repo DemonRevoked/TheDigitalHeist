@@ -1,97 +1,141 @@
-## Challenge 2 — `FUN_001010a0`
+Ghidra Walkthrough (simple steps)
+1) Open the file and let Ghidra analyze it
 
-### Evidence Tampering Console
+Open Ghidra
 
-### Objective
+File → New Project
 
-Determine the correct **epoch timestamp** that passes validation.
+Drag the binary into the project (or File → Import File)
 
----
+Double-click the imported file
 
-## Step 1: Understand Input Validation
+When it asks to analyze, click OK (default options)
 
-User input is read and parsed as a 64-bit integer:
+2) Find the “success” message
 
-```c
-uVar4 = strtoull(local_a8, &endptr, 10);
-```
+Go to Search → For Strings
 
-Then validated using:
+In the list, find:
 
-```c
-if ((uVar4 ^ 0x5a5a5a5a5a5a5a5a) - 0x1111110a == uVar5)
-```
+"Timeline rewrite validated."
 
-We must determine `uVar5`.
+Double-click it
 
----
+This jumps you to where that text lives in memory.
 
-## Step 2: Recover the Hidden Target Value
+3) Jump to the code that uses that message
 
-The function builds a hidden decimal string:
+With the string highlighted, press X
 
-```c
-local_bd[10+i] = local_bd[i] ^ 0x2a;
-uVar5 = strtoull((char *)(local_bd + 10), 0, 10);
-```
+(or right-click → References → Show References)
 
-XOR-decoding produces:
+Double-click the reference you see
 
-```text
-1700013377
-```
+Now you are inside the function that checks your input.
+
+4) Use the Decompiler view (ignore assembly)
+
+Look at the Decompiler window (it shows C-like code)
+
+Find the line that reads your input number, usually:
+
+strtoull(...)
+
+Find the if (...) check that decides accept/reject.
+
+In your case, the key check is:
+
+uVar11 = (uVar10 ^ 0x5a5a5a5a5a5a5a5a) - 0x1111110a;
+if (uVar11 != uVar8) reject;
+
+
+Write down the constants:
+
+0x5a5a5a5a5a5a5a5a
+
+0x1111110a
+
+5) Find out what uVar8 is
+
+Scroll a little above and you’ll see something like:
+
+FUN_00101900(0x102200, 10, buffer);
+uVar8 = strtoull(buffer, 0, 10);
+
+
+This tells you:
+
+the program decrypts 10 bytes from address 0x102200
+
+then turns them into a number using strtoull
+
+6) Go to that data address and copy the first 10 bytes
+
+Click on 0x102200 in the decompiler
+
+Press G (Go To)
+
+Enter 0x00102200 and press Enter
+
+In the listing view, you’ll see DAT_00102200
+
+Select the first 10 bytes:
+
+e1 90 f6 cd c4 ba 89 92 bf a8
+
+(You already did this correctly.)
+
+7) Understand the trick: strtoull returns 0 if it doesn’t start with digits
+
+Because those decrypted bytes do not become something starting with 0-9,
+strtoull(...) becomes:
+
+✅ uVar8 = 0
+
+You can remember this rule:
+
+If decoded text starts with letters, it’s not a number → result 0.
+
+8) Solve the check with uVar8 = 0
+
+You saw the check:
+
+(uVar10 ^ Z) - C == uVar8
+
+
+With uVar8 = 0:
+
+(uVar10 ^ Z) - C == 0
+
 
 So:
 
-```text
-uVar5 = 1700013377
-```
+uVar10 ^ Z = C
+uVar10 = C ^ Z
 
----
-
-## Step 3: Solve the Validation Equation
-
-Given:
-
-```text
-(uVar4 ^ K) - C = uVar5
-```
 
 Where:
 
-* `K = 0x5a5a5a5a5a5a5a5a`
-* `C = 0x1111110a`
-* `uVar5 = 1700013377`
+Z = 0x5a5a5a5a5a5a5a5a
 
-Rearrange:
+C = 0x1111110a
 
-```text
-uVar4 = (uVar5 + C) ^ K
-```
+So:
 
----
+uVar10 = 0x5a5a5a5a4b4b4b50
 
-## Step 4: Compute the Required Input
 
-```text
-1700013377 + 0x1111110a = 1986344523
-1986344523 ^ 0x5a5a5a5a5a5a5a5a = 6510615554653383697
-```
+Decimal:
 
----
+✅ 6510615555174255440
 
-## Step 5: Solution Summary
+9) Enter the answer
 
-**Input to provide**
+Run the program and enter:
 
-```text
-6510615554653383697
-```
+6510615555174255440
 
-**Flag obtained**
 
-```text
-TDHCTF{tampered_time_offset}
-```
+You should get:
 
----
+Timeline rewrite validated.

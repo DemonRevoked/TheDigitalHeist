@@ -62,3 +62,4 @@ RUN echo "TDHCTF{confession_gateway_phrase}" > /app/basics.txt && \
     chmod 600 /app/basics.txt
 
 CMD ["/app/entrypoint.sh"]
+

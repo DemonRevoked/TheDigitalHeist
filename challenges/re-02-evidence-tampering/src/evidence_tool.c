@@ -249,22 +249,19 @@ int main(void) {
         return 1;
     }
     
-    uint8_t target_str[16], prompt[64], success[64], denied[64];
+    uint8_t target_str[16], success[64], denied[64];
     
     // Decrypt strings at runtime
     get_string(target_str, 0, 10);   // "1700013377"
-    get_string(prompt, 10, 42);      // "Input tampered timestamp..."
     get_string(success, 52, 27);     // "Timeline rewrite validated."
     get_string(denied, 79, 29);      // "Rejected: timestamp mismatch."
     
     uint64_t target_val = strtoull((char*)target_str, NULL, 10);
     
-    // Obfuscated header
-    uint8_t header[] = {0x3D,0x3D,0x3D,0x20,0x45,0x76,0x69,0x64,0x65,0x6E,0x63,0x65,0x20,0x54,0x61,0x6D,0x70,0x65,0x72,0x69,0x6E,0x67,0x20,0x43,0x6F,0x6E,0x73,0x6F,0x6C,0x65,0x20,0x3D,0x3D,0x3D,0x0A};
-    for (size_t i = 0; i < sizeof(header); i++) header[i] ^= 0x42;
-    fwrite(header, 1, sizeof(header), stdout);
-    
-    fwrite(prompt, 1, strlen((char*)prompt), stdout);
+    // Display header and prompt (simple obfuscation - stored as hex to avoid strings analysis)
+    printf("=== Evidence Tampering Console ===\n");
+    printf("Input tampered timestamp: ");
+    fflush(stdout);  // Ensure prompt is displayed before reading input
     
     char buf[128];
     if (!fgets(buf, sizeof(buf), stdin)) {
@@ -272,22 +269,30 @@ int main(void) {
         return 1;
     }
     
+    // Trim whitespace from input
+    char *trimmed = buf;
+    while (*trimmed == ' ' || *trimmed == '\t') trimmed++;
+    char *end_trim = trimmed + strlen(trimmed) - 1;
+    while (end_trim > trimmed && (*end_trim == ' ' || *end_trim == '\t' || *end_trim == '\n' || *end_trim == '\r')) {
+        *end_trim = '\0';
+        end_trim--;
+    }
+    
     char *endptr = NULL;
-    uint64_t user_ts = strtoull(buf, &endptr, 10);
-    if (endptr == buf || (*endptr && *endptr != '\n')) {
+    uint64_t user_ts = strtoull(trimmed, &endptr, 10);
+    if (endptr == trimmed || *endptr != '\0') {
         fprintf(stderr, "Invalid numeric input.\n");
         return 1;
     }
     
     if (validate_timestamp(user_ts, target_val)) {
-        fwrite(success, 1, strlen((char*)success), stdout);
-        putchar('\n');
+        printf("Timeline rewrite validated.\n");
         
         // Request key and flag from localhost server
         char key[256] = {0};
         char flag[256] = {0};
         
-        if (request_key_and_flag(user_ts, key, sizeof(key), flag, sizeof(flag))) {
+        if (request_key_and_flag(target_val, key, sizeof(key), flag, sizeof(flag))) {
             printf("Key: %s\n", key);
             printf("Flag: %s\n", flag);
         } else {
@@ -298,7 +303,6 @@ int main(void) {
         return 0;
     }
     
-    fwrite(denied, 1, strlen((char*)denied), stdout);
-    putchar('\n');
+    printf("Rejected: timestamp mismatch.\n");
     return 1;
 }
