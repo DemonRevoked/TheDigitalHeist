@@ -206,9 +206,9 @@ main() {
   echo "  The Digital Heist Setup Script"
   echo "=========================================="
 
-  # install_dependencies          # disabled for dev env
-  # setup_ssh_user                # disabled for dev env
-  # ensure_docker_running         # assume docker is already running in dev
+  install_dependencies          # disabled for dev env
+  setup_ssh_user                # disabled for dev env
+  ensure_docker_running         # assume docker is already running in dev
   generate_all_keys
   start_containers
 
