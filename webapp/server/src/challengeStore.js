@@ -72,17 +72,17 @@ const challengeStories = {
     'A Directorate field agent posts a photo online. The crew performs EXIF reconstruction and light analysis, revealing a hidden operational unit behind the agent. This confirms multiple nodes in the Directorate\'s surveillance chain.',
   'df-02':
     'A half-destroyed USB stick retrieved by Nairobi contains scrambled operational files. File carving reveals a fragmented network diagram of the Directorate\'s core systems—the digital equivalent of the Royal Mint blueprint.',
-  'web-01':
+  'web-01-royalmint':
     'Behind a public memorial page, Denver brute-forces directories and finds deleted policy documents explaining how A₀ automates digital manipulation. This is proof the AI exists.',
-  'web-02':
+  'web-02-ticket-to-the-vault':
     'The Directorate\'s "tip portal" is vulnerable to SQLi/IDOR. The crew reads internally filed reports and finds an anonymous complaint from a whistleblower describing the system architecture.',
   'web-03':
     'Helsinki bypasses authentication and chains a logic flaw to access the Directorate\'s evidence hash system. They discover that all digital logs related to A₀ are cryptographically replaced to hide unauthorized modifications. This is the clearest sign of systemic corruption.',
-  'crypto-01':
+  'crypto-01-intercepted-comms':
     'An operative\'s encrypted notes use a weak cipher. Decrypting them reveals internal codenames for A₀ submodules.',
-  'crypto-02':
+  'crypto-02-vault-breach':
     'Lisbon identifies an AES-encrypted memo. Using known plaintext structures, the crew recovers a name: The Directorate\'s chief architect. They now know who built A₀.',
-  'crypto-03':
+  'crypto-03-quantum-safe':
     'The Directorate\'s RSA vault uses poor padding. The crew factors it and extracts the master key index, giving theoretical access to the Digital Vault. The final heist phase begins.',
   'net-01':
     'PCAP analysis reveals a repeatable pattern—the signature of a rogue internal engineer sending packets to the AI\'s command node. This engineer becomes the crew\'s shadow helper.',
@@ -110,12 +110,12 @@ const challengeDifficulties = {
   'mob-02': 'hard',
   'df-01': 'medium',
   'df-02': 'hard',
-  'web-01': 'easy',
-  'web-02': 'medium',
+  'web-01-royalmint': 'easy',
+  'web-02-ticket-to-the-vault': 'medium',
   'web-03': 'hard',
-  'crypto-01': 'easy',
-  'crypto-02': 'medium',
-  'crypto-03': 'hard',
+  'crypto-01-intercepted-comms': 'easy',
+  'crypto-02-vault-breach': 'medium',
+  'crypto-03-quantum-safe': 'hard',
   'net-01': 'medium',
   'net-02': 'hard',
   'sc-01': 'easy',
@@ -134,12 +134,12 @@ const challengeOrder = [
   'mob-02',
   'df-01',
   'df-02',
-  'web-01',
-  'web-02',
+  'web-01-royalmint',
+  'web-02-ticket-to-the-vault',
   'web-03',
-  'crypto-01',
-  'crypto-02',
-  'crypto-03',
+  'crypto-01-intercepted-comms',
+  'crypto-02-vault-breach',
+  'crypto-03-quantum-safe',
   'net-01',
   'net-02',
   'sc-01',
@@ -218,6 +218,9 @@ export default class ChallengeStore {
       const basePath = path.join(this.challengeFilesDir, slug);
       const [category, order] = slug.split('-');
 
+      // Check if challenge directory exists
+      const challengeExists = fs.existsSync(basePath);
+
       // Collect files if directory exists
       const files = this.collectFiles(basePath, (relativePath, fullPath) => ({
         name: relativePath,
@@ -264,7 +267,8 @@ export default class ChallengeStore {
         credentials: [],
         sshCredentials: Object.keys(sshCredentials).length > 0 ? sshCredentials : undefined,
         platformUrl: Object.keys(platformUrl).length > 0 ? platformUrl : undefined,
-        tags: [category]
+        tags: [category],
+        available: challengeExists
       };
     });
 

@@ -104,8 +104,11 @@ services:
     container_name: ai02-cerberus
     ports:
       - "8081:5000"
+    volumes:
+      - ./keys/ai-02.key:/run/secrets/ai-02.key:ro
     environment:
       - FLASK_ENV=production
+      - CHALLENGE_KEY_FILE=/run/secrets/ai-02.key
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]

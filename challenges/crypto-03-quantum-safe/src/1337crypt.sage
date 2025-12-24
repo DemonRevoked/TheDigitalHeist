@@ -88,7 +88,7 @@ with open(debug_path, 'w') as f:
     f.write('message = {}\n'.format(message))
 
 print("[+] Challenge file generated: {}".format(output_path))
-print("[+] n = {} bits".format(n.nbits()))
+print("[+] n = {} bits".format(n.bit_length()))
 print("[+] Hint = {}".format(hint))
 print("[+] D = {}".format(D))
 print("[+] Message encrypted as {} bits".format(len(c)))

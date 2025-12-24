@@ -18,9 +18,13 @@ COPY . .
 # Train the model on container build
 RUN python train_cerberus.py
 
+# Copy and set up entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 # Expose port
 EXPOSE 5000
 
-# Run the application
-CMD ["python", "app.py"]
+# Use entrypoint script to load dynamic keys
+ENTRYPOINT ["/entrypoint.sh"]
 

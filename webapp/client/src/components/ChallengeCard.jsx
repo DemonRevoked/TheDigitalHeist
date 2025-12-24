@@ -1,39 +1,54 @@
 import { useState } from 'react';
 
 export default function ChallengeCard({ challenge, categoryLabel }) {
-  const { title, slug, shortDescription, files = [], difficulty, points = 0, sshCredentials, platformUrl } = challenge;
+  const { title, slug, shortDescription, files = [], difficulty, points = 0, sshCredentials, platformUrl, available = true } = challenge;
 
   const [isOpen, setIsOpen] = useState(false);
   const fileCount = files.length;
 
   const difficultyClass = difficulty && difficulty !== 'unknown' ? `card-difficulty-${difficulty}` : '';
+  const inactiveClass = !available ? 'card-inactive' : '';
+
+  const handleClick = () => {
+    if (available) {
+      setIsOpen(true);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (available && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      setIsOpen(true);
+    }
+  };
 
   return (
     <>
       <article
-        className={`card collapsed ${isOpen ? 'card-active' : ''} ${difficultyClass}`}
+        className={`card collapsed ${isOpen ? 'card-active' : ''} ${difficultyClass} ${inactiveClass}`}
         role="button"
-        tabIndex={0}
-        onClick={() => setIsOpen(true)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            setIsOpen(true);
-          }
-        }}
+        tabIndex={available ? 0 : -1}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        aria-disabled={!available}
       >
         <header className="card-header">
           <div className="card-headline">
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
               <div className="chip">{categoryLabel}</div>
-              {difficulty && difficulty !== 'unknown' && (
+              {!available && (
+                <div className="coming-soon-badge">
+                  Coming Soon
+                </div>
+              )}
+              {available && difficulty && difficulty !== 'unknown' && (
                 <div className={`difficulty-badge difficulty-${difficulty}`}>
                   {difficulty === 'easy' && '🥉 Easy'}
                   {difficulty === 'medium' && '🥈 Medium'}
                   {difficulty === 'hard' && '🥇 Hard'}
                 </div>
               )}
-              {points > 0 && (
+              {available && points > 0 && (
                 <div className="points-badge">
                   {points} pts
                 </div>
