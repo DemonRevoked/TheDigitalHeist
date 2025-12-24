@@ -90,6 +90,8 @@ services:
     container_name: ai01-artemis
     ports:
       - "8080:8000"
+    volumes:
+      - ./keys/ai-01.key:/run/secrets/ai-01.key:ro
     restart: unless-stopped
 
   ai02-cerberus:
@@ -177,7 +179,7 @@ services:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://ctf:ticketvault2024@web02-db:5432/ctfdb
       - SESSION_SECRET=ticket_vault_session_secret_2024
-      - FLAG=TDHCTF{xss_bot_exfiltration}
+      - FLAG=TDHCTF{THE_BOT_DID_THE_DIRTY_WORK}
       - RESET_ON_STARTUP=true
       - CHALLENGE_KEY_FILE=/run/secrets/web-02.key
     volumes:
@@ -186,6 +188,44 @@ services:
       web02-db:
         condition: service_healthy
     restart: unless-stopped
+
+  web03-safehouse:
+    build:
+      context: ./challenges/web-03-safehouse
+    image: digitalheist/web-03-safehouse
+    container_name: web03-safehouse
+    ports:
+      - "5003:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - SESSION_SECRET=safehouse_session_secret_2024
+      - FLAG=TDHCTF{ssrf_internal_pivot}
+      - INTERNAL_TOKEN=PROFESSOR_TOKEN_x9f3c2a
+      - CHALLENGE_KEY_FILE=/run/secrets/web-03.key
+    volumes:
+      - ./keys/web-03.key:/run/secrets/web-03.key:ro
+    depends_on:
+      - web03-internal-admin
+    restart: unless-stopped
+
+  web03-internal-admin:
+    build:
+      context: ./challenges/web-03-safehouse/internal-admin
+    image: digitalheist/web-03-internal-admin
+    container_name: web03-internal-admin
+    networks:
+      default:
+        aliases:
+          - internal-admin
+    environment:
+      - FLAG=TDHCTF{TOKYO_SENT_THE_TRIGGER}
+      - INTERNAL_TOKEN=PROFESSOR_TOKEN_x9f3c2a
+      - CHALLENGE_KEY_FILE=/run/secrets/web-03.key
+    volumes:
+      - ./keys/web-03.key:/run/secrets/web-03.key:ro
+    expose:
+      - "8080"
 
   landing-app:
     build:

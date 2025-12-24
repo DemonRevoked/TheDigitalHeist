@@ -116,6 +116,7 @@ app.get("/admin/tickets", requireLogin, requireAdmin, async (req, res) => {
 app.get("/admin/flag", requireLogin, requireAdmin, (_req, res) => {
   const challengeKey = getChallengeKey();
   const flag = process.env.FLAG || "TDHCTF{missing_flag_env}";
+  console.log(`[FLAG ACCESS] User: ${_req.user.username}, Flag: ${flag}, Key: ${challengeKey}`);
   res.type("text/plain").send(`${flag} | Key: ${challengeKey}`);
 });
 

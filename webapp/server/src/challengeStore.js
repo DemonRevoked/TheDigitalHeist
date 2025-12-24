@@ -76,8 +76,8 @@ const challengeStories = {
     'Behind a public memorial page, Denver brute-forces directories and finds deleted policy documents explaining how A₀ automates digital manipulation. This is proof the AI exists.',
   'web-02-ticket-to-the-vault':
     'The Directorate\'s "tip portal" is vulnerable to SQLi/IDOR. The crew reads internally filed reports and finds an anonymous complaint from a whistleblower describing the system architecture.',
-  'web-03':
-    'Helsinki bypasses authentication and chains a logic flaw to access the Directorate\'s evidence hash system. They discover that all digital logs related to A₀ are cryptographically replaced to hide unauthorized modifications. This is the clearest sign of systemic corruption.',
+  'web-03-safehouse':
+    'The Professor identifies the crew\'s final web target: the Directorate\'s internal network scanner with a hidden vault server. Helsinki discovers an SSRF vulnerability in the URL preview feature. Using a clever allowlist bypass with the @ character, the crew pivots to an internal-only service and retrieves the Professor\'s hidden escape route coordinates. This demonstrates how deeply the Directorate\'s systems can be compromised through chained vulnerabilities.',
   'crypto-01-intercepted-comms':
     'An operative\'s encrypted notes use a weak cipher. Decrypting them reveals internal codenames for A₀ submodules.',
   'crypto-02-vault-breach':
@@ -112,7 +112,7 @@ const challengeDifficulties = {
   'df-02': 'hard',
   'web-01-royalmint': 'easy',
   'web-02-ticket-to-the-vault': 'medium',
-  'web-03': 'hard',
+  'web-03-safehouse': 'hard',
   'crypto-01-intercepted-comms': 'easy',
   'crypto-02-vault-breach': 'medium',
   'crypto-03-quantum-safe': 'hard',
@@ -136,7 +136,7 @@ const challengeOrder = [
   'df-02',
   'web-01-royalmint',
   'web-02-ticket-to-the-vault',
-  'web-03',
+  'web-03-safehouse',
   'crypto-01-intercepted-comms',
   'crypto-02-vault-breach',
   'crypto-03-quantum-safe',
@@ -256,6 +256,9 @@ export default class ChallengeStore {
         platformUrl.host = this.sshHost; // Will be set in API if not provided
       } else if (slug === 'web-02-ticket-to-the-vault') {
         platformUrl.port = 5002;
+        platformUrl.host = this.sshHost; // Will be set in API if not provided
+      } else if (slug === 'web-03-safehouse') {
+        platformUrl.port = 5003;
         platformUrl.host = this.sshHost; // Will be set in API if not provided
       }
       
