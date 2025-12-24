@@ -2,30 +2,11 @@ require("dotenv").config();
 const express = require("express");
 const session = require("express-session");
 const path = require("path");
-const fs = require("fs");
 const PgSession = require("connect-pg-simple")(session);
 
 const { pool, initDb } = require("./storage/db");
 const authRoutes = require("./routes/auth");
 const { requireLogin, requireAdmin } = require("./routes/middleware");
-
-// Read challenge key from file if provided, otherwise use env var
-function getChallengeKey() {
-  const keyFile = process.env.CHALLENGE_KEY_FILE;
-  if (keyFile && fs.existsSync(keyFile)) {
-    try {
-      const key = fs.readFileSync(keyFile, 'utf8').trim();
-      console.log(`✓ Challenge key loaded from file: ${keyFile}`);
-      console.log(`✓ Key value: ${key}`);
-      return key;
-    } catch (err) {
-      console.error('Failed to read challenge key file:', err);
-    }
-  }
-  const fallbackKey = process.env.CHALLENGE_KEY || "offline-default-web02";
-  console.log(`⚠ Using fallback challenge key: ${fallbackKey}`);
-  return fallbackKey;
-}
 
 const app = express();
 app.set("view engine", "ejs");
@@ -77,7 +58,13 @@ app.post("/collector", async (req, res) => {
   // Collector is intentionally simple; in real apps you'd authenticate/authorize properly.
   // We tie captures to a user_id passed in the request for CTF convenience.
   const { user_id, data } = req.body || {};
-  if (!user_id || typeof data !== "string") return res.status(400).json({ ok: false });
+  
+  console.log(`[collector] Received request: user_id=${user_id}, data length=${data ? data.length : 0}, data preview=${data ? data.substring(0, 100) : 'null'}`);
+  
+  if (!user_id || typeof data !== "string") {
+    console.log(`[collector] Invalid request: user_id=${user_id}, data type=${typeof data}`);
+    return res.status(400).json({ ok: false });
+  }
   
   const userId = Number(user_id);
   
@@ -85,6 +72,7 @@ app.post("/collector", async (req, res) => {
   const isFlag = /flag\{/i.test(data);
   
   if (isFlag) {
+    console.log(`[collector] ✓ Flag detected for user_id=${userId}: ${data.substring(0, 50)}...`);
     // Check if user already has this exact flag captured
     const existing = await pool.query(
       "SELECT id FROM captures WHERE user_id = $1 AND data = $2 LIMIT 1",
@@ -93,12 +81,14 @@ app.post("/collector", async (req, res) => {
     
     if (existing.rows.length > 0) {
       // Flag already captured, don't insert duplicate
+      console.log(`[collector] Flag already captured for user_id=${userId}`);
       return res.json({ ok: true, message: "Flag already captured" });
     }
   }
   
   // Insert new capture (either first flag capture or non-flag data)
   await pool.query("INSERT INTO captures (user_id, data) VALUES ($1, $2)", [userId, data]);
+  console.log(`[collector] Captured data for user_id=${userId}, isFlag=${isFlag}`);
   res.json({ ok: true });
 });
 
@@ -114,10 +104,7 @@ app.get("/admin/tickets", requireLogin, requireAdmin, async (req, res) => {
 
 // The Professor's master plan (admin-only secret endpoint)
 app.get("/admin/flag", requireLogin, requireAdmin, (_req, res) => {
-  const challengeKey = getChallengeKey();
-  const flag = process.env.FLAG || "TDHCTF{missing_flag_env}";
-  console.log(`[FLAG ACCESS] User: ${_req.user.username}, Flag: ${flag}, Key: ${challengeKey}`);
-  res.type("text/plain").send(`${flag} | Key: ${challengeKey}`);
+  res.type("text/plain").send(process.env.FLAG || "FLAG{missing_flag_env}");
 });
 
 // Reset endpoint (for CTF management - clears tickets and captures)

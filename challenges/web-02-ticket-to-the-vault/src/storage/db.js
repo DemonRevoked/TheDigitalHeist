@@ -39,10 +39,9 @@ async function initDb() {
     console.log('[db] Challenge data reset complete');
   }
 
-  const c = await pool.query("SELECT COUNT(*)::int AS n FROM users");
-  if (c.rows[0].n > 0) return;
-
   // Initialize default users for the challenge
+  // Use INSERT ... ON CONFLICT to ensure users always exist with correct passwords
+  // This handles cases where users might have been deleted or passwords changed
   const users = [
     { username: "tokyo", password: "rio123", role: "user" },
     { username: "admin", password: "admin123", role: "admin" }
@@ -50,10 +49,15 @@ async function initDb() {
 
   for (const u of users) {
     const hash = await bcrypt.hash(u.password, 10);
+    // Use ON CONFLICT to update password if user exists, or insert if new
     await pool.query(
-      "INSERT INTO users (username, password_hash, role) VALUES ($1, $2, $3)",
+      `INSERT INTO users (username, password_hash, role) 
+       VALUES ($1, $2, $3)
+       ON CONFLICT (username) 
+       DO UPDATE SET password_hash = $2, role = $3`,
       [u.username, hash, u.role]
     );
+    console.log(`[db] Ensured user exists: ${u.username}`);
   }
 }
 

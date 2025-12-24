@@ -8,11 +8,20 @@ router.get("/login", (req, res) => res.render("login", { error: null }));
 
 router.post("/login", async (req, res) => {
   const { username, password } = req.body;
-  const { rows } = await pool.query("SELECT * FROM users WHERE username=$1", [username]);
+  
+  // Trim whitespace from username and password
+  const trimmedUsername = (username || "").trim();
+  const trimmedPassword = (password || "").trim();
+  
+  if (!trimmedUsername || !trimmedPassword) {
+    return res.status(401).render("login", { error: "Invalid credentials" });
+  }
+  
+  const { rows } = await pool.query("SELECT * FROM users WHERE username=$1", [trimmedUsername]);
   const user = rows[0];
   if (!user) return res.status(401).render("login", { error: "Invalid credentials" });
 
-  const ok = await bcrypt.compare(password, user.password_hash);
+  const ok = await bcrypt.compare(trimmedPassword, user.password_hash);
   if (!ok) return res.status(401).render("login", { error: "Invalid credentials" });
 
   req.session.user = { id: user.id, username: user.username, role: user.role };
