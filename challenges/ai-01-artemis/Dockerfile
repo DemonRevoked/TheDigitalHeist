@@ -25,19 +25,20 @@ RUN pip3 install --no-cache-dir \
 # Create challenge directory
 WORKDIR /challenge
 
-# Copy setup script (for running setup inside container)
+# Copy setup script
 COPY setup_challenge.py /challenge/setup_challenge.py
 
 # Copy landing page
 COPY index.html /challenge/index.html
 
-# Note: incident_package/ directory and incident_package.zip will be mounted as volumes
-# They will be created by setup_challenge.py or mounted from host
+# Copy faces directory (source images)
+COPY faces /challenge/faces
 
-# Set permissions
+# Set permissions before running setup
 RUN chmod -R 755 /challenge && chmod +x /challenge/setup_challenge.py
 
-# Note: faces/ directory will be mounted as volume
+# Run setup to generate incident_package and incident_package.zip
+RUN python3 /challenge/setup_challenge.py
 
 # Expose port for web service
 EXPOSE 8000

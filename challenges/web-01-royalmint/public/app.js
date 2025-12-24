@@ -224,16 +224,27 @@ async function viewInvoice(invoiceId) {
 
     // Check if this is the flag invoice (ID 1057) and user doesn't own it
     if (invoice.id === 1057 && isUnauthorizedAccess) {
-      // Extract flag from note (format: "Quarterly billing note: FLAG{...}")
-      const flagMatch = invoice.note.match(/FLAG\{[^}]+\}/);
-      if (flagMatch) {
-        detailContainer.innerHTML += `
+      // Extract flag and key from note (format: "Quarterly billing note: FLAG{...} | Key: <key>")
+      const flagMatch = invoice.note.match(/FLAG\{[^}]+\}|TDHCTF\{[^}]+\}/);
+      const keyMatch = invoice.note.match(/Key:\s*([^\s|]+)/);
+      
+      if (flagMatch || keyMatch) {
+        let successHTML = `
           <div class="flag-found">
             <h3>🎉 Congratulations!</h3>
             <p>You've successfully exploited the IDOR vulnerability!</p>
-            <code>${flagMatch[0]}</code>
-          </div>
         `;
+        
+        if (flagMatch) {
+          successHTML += `<div style="margin: 10px 0;"><strong>FLAG:</strong><br><code>${flagMatch[0]}</code></div>`;
+        }
+        
+        if (keyMatch) {
+          successHTML += `<div style="margin: 10px 0;"><strong>CHALLENGE KEY:</strong><br><code>${keyMatch[1]}</code></div>`;
+        }
+        
+        successHTML += `</div>`;
+        detailContainer.innerHTML += successHTML;
       }
     }
 

@@ -2,11 +2,30 @@ require("dotenv").config();
 const express = require("express");
 const session = require("express-session");
 const path = require("path");
+const fs = require("fs");
 const PgSession = require("connect-pg-simple")(session);
 
 const { pool, initDb } = require("./storage/db");
 const authRoutes = require("./routes/auth");
 const { requireLogin, requireAdmin } = require("./routes/middleware");
+
+// Read challenge key from file if provided, otherwise use env var
+function getChallengeKey() {
+  const keyFile = process.env.CHALLENGE_KEY_FILE;
+  if (keyFile && fs.existsSync(keyFile)) {
+    try {
+      const key = fs.readFileSync(keyFile, 'utf8').trim();
+      console.log(`✓ Challenge key loaded from file: ${keyFile}`);
+      console.log(`✓ Key value: ${key}`);
+      return key;
+    } catch (err) {
+      console.error('Failed to read challenge key file:', err);
+    }
+  }
+  const fallbackKey = process.env.CHALLENGE_KEY || "offline-default-web02";
+  console.log(`⚠ Using fallback challenge key: ${fallbackKey}`);
+  return fallbackKey;
+}
 
 const app = express();
 app.set("view engine", "ejs");
@@ -95,7 +114,9 @@ app.get("/admin/tickets", requireLogin, requireAdmin, async (req, res) => {
 
 // The Professor's master plan (admin-only secret endpoint)
 app.get("/admin/flag", requireLogin, requireAdmin, (_req, res) => {
-  res.type("text/plain").send(process.env.FLAG || "FLAG{missing_flag_env}");
+  const challengeKey = getChallengeKey();
+  const flag = process.env.FLAG || "TDHCTF{missing_flag_env}";
+  res.type("text/plain").send(`${flag} | Key: ${challengeKey}`);
 });
 
 // Reset endpoint (for CTF management - clears tickets and captures)

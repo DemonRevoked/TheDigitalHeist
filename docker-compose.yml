@@ -90,10 +90,6 @@ services:
     container_name: ai01-artemis
     ports:
       - "8080:8000"
-    volumes:
-      # - ./challenges/ai-01-artemis/incident_package:/challenge/incident_package:ro
-      - ./challenges/ai-01-artemis/incident_package.zip:/challenge/incident_package.zip:ro
-      - ./challenges/ai-01-artemis/index.html:/challenge/index.html:ro
     restart: unless-stopped
 
   ai02-cerberus:
@@ -116,6 +112,80 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+
+  web01-db:
+    image: postgres:16-alpine
+    container_name: web01-db
+    environment:
+      POSTGRES_USER: ctf
+      POSTGRES_PASSWORD: royalmint2024
+      POSTGRES_DB: ctfdb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ctf -d ctfdb"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - web01-pgdata:/var/lib/postgresql/data
+
+  web01-royalmint:
+    build:
+      context: ./challenges/web-01-royalmint
+    image: digitalheist/web-01-royalmint
+    container_name: web01-royalmint
+    ports:
+      - "5001:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://ctf:royalmint2024@web01-db:5432/ctfdb
+      - SESSION_SECRET=royalmint_session_secret_key_2024
+      - FLAG=TDHCTF{DENVER_LAUGHS_AT_BROKEN_ACL}
+      - CHALLENGE_KEY_FILE=/run/secrets/web-01.key
+      - RESET_ON_STARTUP=true
+    volumes:
+      - ./keys/web-01.key:/run/secrets/web-01.key:ro
+    depends_on:
+      web01-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web02-db:
+    image: postgres:16-alpine
+    container_name: web02-db
+    environment:
+      POSTGRES_USER: ctf
+      POSTGRES_PASSWORD: ticketvault2024
+      POSTGRES_DB: ctfdb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ctf -d ctfdb"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - web02-pgdata:/var/lib/postgresql/data
+
+  web02-ticket-to-the-vault:
+    build:
+      context: ./challenges/web-02-ticket-to-the-vault
+    image: digitalheist/web-02-ticket-to-the-vault
+    container_name: web02-ticket-to-the-vault
+    ports:
+      - "5002:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://ctf:ticketvault2024@web02-db:5432/ctfdb
+      - SESSION_SECRET=ticket_vault_session_secret_2024
+      - FLAG=TDHCTF{xss_bot_exfiltration}
+      - RESET_ON_STARTUP=true
+      - CHALLENGE_KEY_FILE=/run/secrets/web-02.key
+    volumes:
+      - ./keys/web-02.key:/run/secrets/web-02.key:ro
+    depends_on:
+      web02-db:
+        condition: service_healthy
+    restart: unless-stopped
 
   landing-app:
     build:
@@ -140,3 +210,7 @@ services:
     command: >
       sh -c "npm --prefix client run build -- --watch --clearScreen=false &
       PORT=$${PORT:-80} npm --prefix server run dev"
+
+volumes:
+  web01-pgdata:
+  web02-pgdata:

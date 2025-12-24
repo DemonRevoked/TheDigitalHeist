@@ -218,9 +218,6 @@ export default class ChallengeStore {
       const basePath = path.join(this.challengeFilesDir, slug);
       const [category, order] = slug.split('-');
 
-      // Check if challenge directory exists
-      const challengeExists = fs.existsSync(basePath);
-
       // Collect files if directory exists
       const files = this.collectFiles(basePath, (relativePath, fullPath) => ({
         name: relativePath,
@@ -254,7 +251,22 @@ export default class ChallengeStore {
       } else if (slug === 'ai-02-cerberus') {
         platformUrl.port = 8081;
         platformUrl.host = this.sshHost; // Will be set in API if not provided
+      } else if (slug === 'web-01-royalmint') {
+        platformUrl.port = 5001;
+        platformUrl.host = this.sshHost; // Will be set in API if not provided
+      } else if (slug === 'web-02-ticket-to-the-vault') {
+        platformUrl.port = 5002;
+        platformUrl.host = this.sshHost; // Will be set in API if not provided
       }
+      
+      // Check if challenge is available:
+      // - Has files in challenge-files directory, OR
+      // - Has SSH credentials configured, OR
+      // - Has platform URL configured
+      const hasSshCredentials = Object.keys(sshCredentials).length > 0;
+      const hasPlatformUrl = Object.keys(platformUrl).length > 0;
+      const hasFiles = files.length > 0;
+      const challengeAvailable = hasFiles || hasSshCredentials || hasPlatformUrl;
       
       return {
         slug,
@@ -265,10 +277,10 @@ export default class ChallengeStore {
         shortDescription: challengeStories[slug] || 'Challenge files available for download.',
         files,
         credentials: [],
-        sshCredentials: Object.keys(sshCredentials).length > 0 ? sshCredentials : undefined,
-        platformUrl: Object.keys(platformUrl).length > 0 ? platformUrl : undefined,
+        sshCredentials: hasSshCredentials ? sshCredentials : undefined,
+        platformUrl: hasPlatformUrl ? platformUrl : undefined,
         tags: [category],
-        available: challengeExists
+        available: challengeAvailable
       };
     });
 

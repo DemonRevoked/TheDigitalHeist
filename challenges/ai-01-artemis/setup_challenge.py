@@ -25,6 +25,7 @@ ASSETS_DIR = CHALLENGE_DIR / "assets"
 FLAG_PART2 = "lsb_recovered"
 FINAL_FLAG = f"flag{{deepfake_identified_{FLAG_PART2}}}"
 STEGO_PASSWORD = "ArtemisAI"
+CHALLENGE_KEY = "ARTEMIS_VERIFICATION_KEY_2024"
 
 def create_directories():
     """Create incident_package directory structure with assets/"""
@@ -229,6 +230,55 @@ def add_metadata_to_deepfake():
         
     except subprocess.CalledProcessError as e:
         print(f"Warning: Encryption or metadata addition failed: {e}")
+    finally:
+        os.chdir(original_cwd)
+
+def add_challenge_key_to_img002():
+    """Add challenge key metadata to img_002.png"""
+    img002_path = ASSETS_DIR / "img_002.png"
+    
+    if not img002_path.exists():
+        print(f"Warning: {img002_path} not found")
+        return
+    
+    # Check if exiftool is available
+    try:
+        subprocess.run(['exiftool', '-ver'], check=True, capture_output=True)
+        exiftool_available = True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        exiftool_available = False
+        print("Warning: exiftool not found. Challenge key metadata will not be added to img_002.png.")
+        print("Install with: sudo apt-get install libimage-exiftool-perl")
+        return
+    
+    # Change to assets directory
+    original_cwd = os.getcwd()
+    os.chdir(ASSETS_DIR)
+    
+    try:
+        # Add challenge key to EXIF metadata
+        commands = [
+            ['exiftool', '-Comment=', '-overwrite_original', 'img_002.png'],  # Remove any existing Comment
+            ['exiftool', f'-UserComment=challenge_key:{CHALLENGE_KEY}', '-overwrite_original', 'img_002.png'],
+            ['exiftool', '-Software=ArtemisVerify_v2.1', '-overwrite_original', 'img_002.png'],
+            ['exiftool', '-ImageDescription=Verification sample - baseline reference', '-overwrite_original', 'img_002.png'],
+        ]
+        
+        for cmd in commands:
+            try:
+                subprocess.run(cmd, check=True, capture_output=True)
+            except subprocess.CalledProcessError as e:
+                print(f"Warning: Could not set metadata on img_002.png: {e}")
+        
+        # Cleanup exiftool backup file if it exists
+        backup_file = Path("img_002.png_original")
+        if backup_file.exists():
+            backup_file.unlink()
+        
+        print(f"✓ Added challenge key metadata to img_002.png")
+        
+    except subprocess.CalledProcessError as e:
+        print(f"Warning: Metadata addition to img_002.png failed: {e}")
     finally:
         os.chdir(original_cwd)
 
@@ -485,6 +535,7 @@ def main():
     
     download_real_images()
     add_metadata_to_deepfake()
+    add_challenge_key_to_img002()
     embed_steganography()
     create_export_bin()
     create_telemetry_dump()
@@ -508,6 +559,7 @@ def main():
     print("=" * 60)
     print(f"Final Flag: {FINAL_FLAG}")
     print(f"Stego Password: {STEGO_PASSWORD}")
+    print(f"Challenge Key: {CHALLENGE_KEY} (embedded in img_002.png metadata)")
     print()
     print(f"Challenge files are in: {CHALLENGE_DIR}/")
     print(f"  - assets/img_001.png through img_005.png (images)")

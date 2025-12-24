@@ -1,9 +1,28 @@
 const { Pool } = require("pg");
 const bcrypt = require("bcryptjs");
+const fs = require("fs");
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
+
+// Read challenge key from file if provided, otherwise use env var
+function getChallengeKey() {
+  const keyFile = process.env.CHALLENGE_KEY_FILE;
+  if (keyFile && fs.existsSync(keyFile)) {
+    try {
+      const key = fs.readFileSync(keyFile, 'utf8').trim();
+      console.log(`✓ Challenge key loaded from file: ${keyFile}`);
+      console.log(`✓ Key value: ${key}`);
+      return key;
+    } catch (err) {
+      console.error('Failed to read challenge key file:', err);
+    }
+  }
+  const fallbackKey = process.env.CHALLENGE_KEY || "offline-default-web01";
+  console.log(`⚠ Using fallback challenge key: ${fallbackKey}`);
+  return fallbackKey;
+}
 
 async function initDb() {
   await pool.query(`
@@ -23,6 +42,12 @@ async function initDb() {
       note TEXT NOT NULL
     );
   `);
+
+  // Check if we should reset on startup (for CTF management)
+  if (process.env.RESET_ON_STARTUP === 'true') {
+    console.log('RESET_ON_STARTUP=true, clearing database...');
+    await pool.query('TRUNCATE TABLE invoices, users RESTART IDENTITY CASCADE');
+  }
 
   // Seed only if empty
   const c = await pool.query("SELECT COUNT(*)::int AS n FROM users");
@@ -54,15 +79,18 @@ async function initDb() {
   }
 
   // Helsinki invoices (includes the flag invoice at 1057)
+  const challengeKey = getChallengeKey();
+  console.log(`📝 Seeding database with challenge key: ${challengeKey}`);
   for (let i = 1050; i <= 1060; i++) {
     const note = (i === 1057)
-      ? `Quarterly billing note: ${process.env.FLAG || "FLAG{missing_flag_env}"}`
+      ? `Quarterly billing note: ${process.env.FLAG || "FLAG{DENVER_LAUGHS_AT_BROKEN_ACL}"} | Key: ${challengeKey}`
       : "Quarterly billing note: processed";
     await pool.query(
       "INSERT INTO invoices (id, user_id, amount, note) VALUES ($1, $2, $3, $4)",
       [i, helsinki, 199 + (i - 1050), note]
     );
   }
+  console.log(`✅ Database seeded successfully with flag at invoice #1057`);
 }
 
 module.exports = { pool, initDb };

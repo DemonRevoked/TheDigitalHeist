@@ -10,8 +10,9 @@ FLAG 7 = TDHCTF{exif_shadow_unit}
 FLAG 8 = TDHCTF{carved_network_node}
 FLAG 9 = TDHCTF{hidden_policy_sentence}
 
-FLAG 10 = FLAG{DENVER_LAUGHS_AT_BROKEN_ACL}
+WEB1 - FLAG 10 = TDHCTF{DENVER_LAUGHS_AT_BROKEN_ACL}
 
-AI2 - FLAG 11 = TDHCTF{cerberus_extracted_<random_hex>} (dynamically generated)
+WEB2 - FLAG 11 = TDHCTF{xss_bot_exfiltration}
 
+AI2 - FLAG 12 = TDHCTF{cerberus_extracted_<random_hex>} (dynamically generated)
 
