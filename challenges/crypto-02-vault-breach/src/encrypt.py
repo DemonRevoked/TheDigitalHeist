@@ -53,9 +53,8 @@ def main():
     else:
         flag = "TDHCTF{vault_breach_decrypted}"
     
-    # Create message containing both key and flag separately
-    # Format: "KEY: <key>\nFLAG: <flag>"
-    message = f"KEY: {challenge_key}\nFLAG: {flag}"
+    # Use just the flag as the message (not the key)
+    message = flag
     
     print("[+] Generating RSA keys with close primes...")
     

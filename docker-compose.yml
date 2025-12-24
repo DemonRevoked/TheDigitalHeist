@@ -189,6 +189,19 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  web02-admin-bot:
+    build:
+      context: ./challenges/web-02-ticket-to-the-vault/bot
+    image: digitalheist/web-02-admin-bot
+    container_name: web02-admin-bot
+    environment:
+      - BASE_URL=http://web02-ticket-to-the-vault:3000
+      - ADMIN_USER=${ADMIN_USER:-admin}
+      - ADMIN_PASS=${ADMIN_PASS:-admin}
+      - BOT_INTERVAL_MS=${BOT_INTERVAL_MS:-5000}
+    depends_on:
+      - web02-ticket-to-the-vault
+
   web03-safehouse:
     build:
       context: ./challenges/web-03-safehouse
