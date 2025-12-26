@@ -122,7 +122,20 @@ generate_all_keys() {
   mkdir -p "$CHALLENGE_FILES_DIR/crypto-01-intercepted-comms"
   mkdir -p "$CHALLENGE_FILES_DIR/crypto-02-vault-breach"
   mkdir -p "$CHALLENGE_FILES_DIR/crypto-03-quantum-safe"
+  mkdir -p "$CHALLENGE_FILES_DIR/net-01-onion-pcap"
+  mkdir -p "$CHALLENGE_FILES_DIR/net-02-doh-rhythm"
   echo "[+] Challenge file directories created"
+
+  # Generate offline network challenge artifacts (PCAPs) so they are downloadable from the landing page.
+  # Pure python; no external deps.
+  if command -v python3 >/dev/null 2>&1; then
+    echo "[*] Generating NET challenge artifacts..."
+    python3 "$SCRIPT_DIR/challenges/net-01-onion-pcap/src/generate_pcap.py" >/dev/null 2>&1 || echo "[!] NET-01 PCAP generation failed (continuing)"
+    python3 "$SCRIPT_DIR/challenges/net-02-doh-rhythm/src/generate_pcap.py" >/dev/null 2>&1 || echo "[!] NET-02 PCAP generation failed (continuing)"
+    echo "[+] NET challenge artifact generation step complete"
+  else
+    echo "[!] python3 not found; skipping NET artifact generation"
+  fi
 
   key1=$(generate_key "Pz1aQw9L" "nE7rVb5C")   # RE-01
   key2=$(generate_key "Dx4kHt2M" "yL6uFp8S")   # RE-02
@@ -136,8 +149,8 @@ generate_all_keys() {
   key10=$(generate_key "Nk6yFo1E" "rJ4vGz9T")  # CRYPTO-01
   key11=$(generate_key "Cp8tMe2H" "uL5qRx7V")  # CRYPTO-02
   key12=$(generate_key "Zs7dWc3B" "yF9nPa6M")  # CRYPTO-03
-  key13=$(generate_key "Tb1vKx8Q" "oD4mJg5L")  # NET-01
-  key14=$(generate_key "Ry2hLp9S" "cN6tVf3A")  # NET-02
+  key13=$(generate_key "Tb1vKx8Q" "oD4mJg5L")  # NET-01 (Onion PCAP)
+  key14=$(generate_key "Ry2hLp9S" "cN6tVf3A")  # NET-02 (DoH Rhythm)
   key15=$(generate_key "Uw5qGd7X" "iB2lZc8R")  # SC-01
   key16=$(generate_key "Gj3nSa6Y" "tE9pQk4M")  # SC-02
   key17=$(generate_key "Pa4mHv1Z" "sC8xLn5J")  # EXP-01
@@ -158,8 +171,11 @@ generate_all_keys() {
   echo "$key10" > "$KEY_DIR/crypto-01.key"
   echo "$key11" > "$KEY_DIR/crypto-02.key"
   echo "$key12" > "$KEY_DIR/crypto-03.key"
+  # Keep backward-compatible names AND new slug-based names (used by the generators).
   echo "$key13" > "$KEY_DIR/net-01.key"
+  echo "$key13" > "$KEY_DIR/net-01-onion-pcap.key"
   echo "$key14" > "$KEY_DIR/net-02.key"
+  echo "$key14" > "$KEY_DIR/net-02-doh-rhythm.key"
   echo "$key15" > "$KEY_DIR/sc-01.key"
   echo "$key16" > "$KEY_DIR/sc-02.key"
   echo "$key17" > "$KEY_DIR/exp-01.key"

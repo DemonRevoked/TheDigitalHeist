@@ -1,0 +1,432 @@
+#!/usr/bin/env python3
+"""
+NET-01 generator (pure python, no deps).
+
+Writes a classic PCAP containing:
+- L2 Ether + 802.1Q VLAN
+- Outer IPv4(proto=47 GRE) -> GRE -> inner IPv6/TCP
+- Covert channel split across outer IPv4.id (low byte) and inner TCP TSval (low byte)
+- Packet index in IPv6 flowlabel low 12 bits (packets are shuffled in the capture)
+- Decoy flows (including a fake flag in payload)
+
+Output:
+  challenge-files/net-01/capture.pcap
+  challenge-files/net-01/README.txt
+"""
+
+from __future__ import annotations
+
+import os
+import random
+import struct
+import time
+from dataclasses import dataclass
+from ipaddress import IPv4Address, IPv6Address
+
+
+def _u16(x: int) -> int:
+    return x & 0xFFFF
+
+
+def _u32(x: int) -> int:
+    return x & 0xFFFFFFFF
+
+
+def checksum16(data: bytes) -> int:
+    if len(data) % 2:
+        data += b"\x00"
+    s = 0
+    for i in range(0, len(data), 2):
+        s += (data[i] << 8) + data[i + 1]
+        s = (s & 0xFFFF) + (s >> 16)
+    return (~s) & 0xFFFF
+
+
+def mac_bytes(mac: str) -> bytes:
+    return bytes(int(b, 16) for b in mac.split(":"))
+
+
+def ipv4_bytes(ip: str) -> bytes:
+    return int(IPv4Address(ip)).to_bytes(4, "big")
+
+
+def ipv6_bytes(ip: str) -> bytes:
+    return int(IPv6Address(ip)).to_bytes(16, "big")
+
+
+def build_ether_vlan(payload: bytes, src: str, dst: str, vlan: int, ethertype: int) -> bytes:
+    # Ether(dst,src,0x8100) + Dot1Q(tci, ethertype) + payload
+    tci = vlan & 0x0FFF
+    return (
+        mac_bytes(dst)
+        + mac_bytes(src)
+        + struct.pack("!H", 0x8100)
+        + struct.pack("!H", tci)
+        + struct.pack("!H", ethertype)
+        + payload
+    )
+
+
+def build_ipv4(payload: bytes, src: str, dst: str, proto: int, ident: int, ttl: int = 64) -> bytes:
+    ver_ihl = (4 << 4) | 5
+    tos = 0
+    total_len = 20 + len(payload)
+    flags_frag = 0  # no fragmentation
+    hdr = struct.pack(
+        "!BBHHHBBH4s4s",
+        ver_ihl,
+        tos,
+        total_len,
+        _u16(ident),
+        flags_frag,
+        ttl,
+        proto,
+        0,  # checksum placeholder
+        ipv4_bytes(src),
+        ipv4_bytes(dst),
+    )
+    csum = checksum16(hdr)
+    hdr = hdr[:10] + struct.pack("!H", csum) + hdr[12:]
+    return hdr + payload
+
+
+def build_gre(payload: bytes, proto_type: int = 0x86DD) -> bytes:
+    # GRE header: flags/version=0, protocol type
+    return struct.pack("!HH", 0x0000, proto_type) + payload
+
+
+def build_ipv6(payload: bytes, src: str, dst: str, next_header: int, hop_limit: int, flow_label: int) -> bytes:
+    ver_tc_fl = (6 << 28) | (0 << 20) | (flow_label & 0xFFFFF)
+    payload_len = len(payload)
+    return struct.pack(
+        "!IHBB16s16s",
+        ver_tc_fl,
+        payload_len,
+        next_header,
+        hop_limit,
+        ipv6_bytes(src),
+        ipv6_bytes(dst),
+    ) + payload
+
+
+def tcp_checksum_ipv6(src: str, dst: str, tcp_seg: bytes) -> int:
+    pseudo = (
+        ipv6_bytes(src)
+        + ipv6_bytes(dst)
+        + struct.pack("!I", len(tcp_seg))
+        + b"\x00" * 3
+        + struct.pack("!B", 6)
+    )
+    return checksum16(pseudo + tcp_seg)
+
+
+def build_tcp(
+    payload: bytes,
+    src_ip: str,
+    dst_ip: str,
+    sport: int,
+    dport: int,
+    seq: int,
+    ack: int,
+    flags: int,
+    window: int,
+    tsval: int | None = None,
+    tsecr: int = 0,
+) -> bytes:
+    # TCP options: NOP, NOP, TS (10 bytes) => 12 bytes; total header 32 bytes
+    options = b""
+    if tsval is not None:
+        options = b"\x01\x01" + struct.pack("!BBII", 8, 10, _u32(tsval), _u32(tsecr))
+    # Pad to 4-byte multiple
+    if len(options) % 4:
+        options += b"\x00" * (4 - (len(options) % 4))
+    data_offset = (20 + len(options)) // 4
+    off_flags = (data_offset << 12) | (flags & 0x01FF)
+    hdr = struct.pack("!HHIIHHHH", sport, dport, _u32(seq), _u32(ack), off_flags, _u16(window), 0, 0)
+    seg = hdr + options + payload
+    csum = tcp_checksum_ipv6(src_ip, dst_ip, seg)
+    hdr = hdr[:16] + struct.pack("!H", csum) + hdr[18:]
+    return hdr + options + payload
+
+
+PCAP_GLOBAL = struct.pack(
+    "<IHHIIII",
+    0xA1B2C3D4,  # magic (little-endian capture)
+    2,
+    4,
+    0,
+    0,
+    65535,
+    1,  # LINKTYPE_ETHERNET
+)
+
+
+def pcap_pkt(ts_sec: int, ts_usec: int, frame: bytes) -> bytes:
+    incl = len(frame)
+    orig = len(frame)
+    return struct.pack("<IIII", ts_sec, ts_usec, incl, orig) + frame
+
+
+@dataclass
+class Frame:
+    ts_us: int
+    data: bytes
+
+
+def main() -> None:
+    random.seed(1337)
+
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    out_dir = os.path.join(repo_root, "challenge-files", "net-01-onion-pcap")
+    os.makedirs(out_dir, exist_ok=True)
+
+    # Flag matches Tasks.md placeholder (so your platform expectations stay coherent)
+    flag = "TDHCTF{rogue_engineer_signal}"
+
+    # Per-deployment challenge key (generated by startup.sh). Players must recover this from the PCAP too.
+    # Priority: env CHALLENGE_KEY > keys/net-01-onion-pcap.key > keys/net-01.key > fallback.
+    challenge_key = os.environ.get("CHALLENGE_KEY", "").strip()
+    if not challenge_key:
+        for cand in ("net-01-onion-pcap.key", "net-01.key"):
+            p = os.path.join(repo_root, "keys", cand)
+            if os.path.exists(p):
+                with open(p, "r", encoding="utf-8", errors="ignore") as fh:
+                    challenge_key = fh.read().strip()
+                break
+    if not challenge_key:
+        challenge_key = "offline-session-key"
+
+    message = f"KEY:{challenge_key}\nFLAG:{flag}\n".encode("utf-8")
+
+    # Inner flow
+    inner_src6 = "2001:db8:1337::10"
+    inner_dst6 = "2001:db8:1337::20"
+    sport = 41414
+    dport = 443
+    key = (sport ^ dport) & 0xFF
+
+    # Outer transport (GRE over IPv4, VLAN tagged)
+    outer_src4 = "198.51.100.10"
+    outer_dst4 = "203.0.113.20"
+    vlan = 133
+    mac_src = "02:42:ac:11:00:02"
+    mac_dst = "02:42:ac:11:00:01"
+
+    frames: list[Frame] = []
+    t0 = int(time.time())
+
+    # Add lots of background traffic to make the capture "heavy" and slow down analysis.
+    # This is intentionally noisy but should remain fair: the real covert stream is uniquely
+    # identifiable by VLAN + GRE + inner IPv6 5-tuple.
+    NOISE_PACKETS = 3500
+    DECOY_GRE_PACKETS = 1200
+
+    def add_noise_ipv4_tcp_udp(count: int) -> None:
+        nonlocal frames
+        for k in range(count):
+            # Randomize protocol mix: TCP(6) / UDP(17) / ICMP(1)
+            proto = random.choice([6, 6, 6, 17, 17, 1])
+            src4 = f"10.0.{random.randrange(0, 10)}.{random.randrange(1, 254)}"
+            dst4 = f"10.0.{random.randrange(0, 10)}.{random.randrange(1, 254)}"
+            if proto == 1:
+                # Minimal ICMP echo payload (not checksummed at ICMP level; fine for offline PCAP noise)
+                icmp = b"\x08\x00\x00\x00" + os.urandom(random.randrange(8, 64))
+                ip_payload = icmp
+            elif proto == 17:
+                # Minimal UDP header + payload
+                sport_n = random.randrange(1024, 65535)
+                dport_n = random.randrange(1, 65535)
+                payload = os.urandom(random.randrange(10, 220))
+                udp_len = 8 + len(payload)
+                udp = struct.pack("!HHHH", sport_n, dport_n, udp_len, 0) + payload
+                ip_payload = udp
+            else:
+                # Minimal TCP-ish packets: ACK/PSH, random payload. (No strict correctness needed.)
+                sport_n = random.randrange(1024, 65535)
+                dport_n = random.choice([22, 80, 443, 8080, 31337, random.randrange(1, 65535)])
+                payload = os.urandom(random.randrange(0, 300))
+                # Very small TCP header (20 bytes) with checksum omitted (still OK for noise)
+                seq_n = random.randrange(0, 2**32)
+                ack_n = random.randrange(0, 2**32)
+                off_flags = (5 << 12) | random.choice([0x10, 0x18, 0x11])  # ACK / PSH+ACK / FIN+ACK
+                tcp = struct.pack("!HHIIHHHH", sport_n, dport_n, seq_n, ack_n, off_flags, 4096, 0, 0) + payload
+                ip_payload = tcp
+
+            ip = build_ipv4(
+                ip_payload,
+                src=src4,
+                dst=dst4,
+                proto=proto,
+                ident=random.randrange(0, 65536),
+                ttl=random.choice([45, 52, 59, 64, 127]),
+            )
+            frame = build_ether_vlan(ip, src=mac_src, dst=mac_dst, vlan=vlan, ethertype=0x0800)
+            ts_us = (t0 * 1_000_000) + random.randrange(0, 2_800_000)
+            frames.append(Frame(ts_us=ts_us, data=frame))
+
+    def add_decoy_gre(count: int) -> None:
+        nonlocal frames
+        for k in range(count):
+            # Decoy GRE using the *same outer tuple* (more annoying), but different inner payload types.
+            # Some are GRE->IPv4, some are GRE->IPv6 with different addresses/ports.
+            if random.random() < 0.55:
+                # GRE carrying IPv4 (proto_type=0x0800)
+                inner_src4 = f"172.16.{random.randrange(0, 16)}.{random.randrange(1, 254)}"
+                inner_dst4 = f"172.16.{random.randrange(0, 16)}.{random.randrange(1, 254)}"
+                payload = os.urandom(random.randrange(20, 160))
+                inner_ip4 = build_ipv4(payload, src=inner_src4, dst=inner_dst4, proto=random.choice([6, 17]), ident=random.randrange(0, 65536), ttl=64)
+                gre = build_gre(inner_ip4, proto_type=0x0800)
+            else:
+                # GRE carrying IPv6 but not the target inner 5-tuple
+                inner_src6_n = f"2001:db8:{random.randrange(1, 65000):x}::{random.randrange(1, 500)}"
+                inner_dst6_n = f"2001:db8:{random.randrange(1, 65000):x}::{random.randrange(1, 500)}"
+                sport_n = random.randrange(1024, 65535)
+                dport_n = random.choice([53, 80, 443, 8443, 31337])
+                payload = os.urandom(random.randrange(0, 220))
+                tcp = build_tcp(
+                    payload=payload,
+                    src_ip=inner_src6_n,
+                    dst_ip=inner_dst6_n,
+                    sport=sport_n,
+                    dport=dport_n,
+                    seq=random.randrange(0, 2**32),
+                    ack=random.randrange(0, 2**32),
+                    flags=0x18,
+                    window=2048,
+                    tsval=(0x22220000 | (k & 0xFF)),
+                    tsecr=0,
+                )
+                inner = build_ipv6(payload=tcp, src=inner_src6_n, dst=inner_dst6_n, next_header=6, hop_limit=64, flow_label=random.randrange(0, 1 << 20))
+                gre = build_gre(inner, proto_type=0x86DD)
+
+            outer = build_ipv4(gre, src=outer_src4, dst=outer_dst4, proto=47, ident=random.randrange(0, 65536), ttl=random.choice([58, 61, 64]))
+            frame = build_ether_vlan(outer, src=mac_src, dst=mac_dst, vlan=vlan, ethertype=0x0800)
+            ts_us = (t0 * 1_000_000) + random.randrange(0, 2_800_000)
+            frames.append(Frame(ts_us=ts_us, data=frame))
+
+    # Flood the capture with background packets before adding the real covert stream.
+    add_noise_ipv4_tcp_udp(NOISE_PACKETS)
+    add_decoy_gre(DECOY_GRE_PACKETS)
+
+    # Build "real" packets (one byte per packet)
+    seq = 100000
+    ack = 200000
+    base_id = 40000
+    base_ts = 0x4A00_0000
+
+    for i, b in enumerate(message):
+        # ciphertext byte depends on position too (forces correct ordering)
+        c = b ^ key ^ (i & 0xFF)
+
+        # Split across fields: c = (ip_id_low ^ tsval_low)
+        ip_id_low = random.randrange(0, 256)
+        ts_low = ip_id_low ^ c
+
+        ip_id = (base_id + i) & 0xFFFF
+        ip_id = (ip_id & 0xFF00) | ip_id_low
+
+        tsval = (base_ts + (i * 9973)) & 0xFFFFFFFF
+        tsval = (tsval & 0xFFFFFF00) | ts_low
+
+        # Index is NOT capture order: stored in IPv6 flowlabel low 12 bits
+        flow_label = (random.randrange(0, 1 << 20) & 0xFFFF000) | (i & 0xFFF)
+
+        # Payload is high-entropy (avoid easy "follow stream" recoveries)
+        payload = os.urandom(random.choice([18, 23, 31, 37]))
+        tcp = build_tcp(
+            payload=payload,
+            src_ip=inner_src6,
+            dst_ip=inner_dst6,
+            sport=sport,
+            dport=dport,
+            seq=seq,
+            ack=ack,
+            flags=0x18,  # PSH, ACK
+            window=4096 + (i % 17),
+            tsval=tsval,
+            tsecr=0,
+        )
+        seq = (seq + len(payload)) & 0xFFFFFFFF
+
+        inner = build_ipv6(
+            payload=tcp,
+            src=inner_src6,
+            dst=inner_dst6,
+            next_header=6,
+            hop_limit=55,
+            flow_label=flow_label,
+        )
+        gre = build_gre(inner, proto_type=0x86DD)
+        outer = build_ipv4(gre, src=outer_src4, dst=outer_dst4, proto=47, ident=ip_id, ttl=61)
+        frame = build_ether_vlan(outer, src=mac_src, dst=mac_dst, vlan=vlan, ethertype=0x0800)
+
+        # Timestamp is in microseconds; we also add jitter so "time sorting" isn't enough.
+        ts_us = (t0 * 1_000_000) + (i * 30_000) + random.randrange(0, 9_000)
+        frames.append(Frame(ts_us=ts_us, data=frame))
+
+    # Decoy: a GRE flow with a fake flag in payload (easy trap)
+    decoy_inner_src6 = "2001:db8:dead::10"
+    decoy_inner_dst6 = "2001:db8:dead::20"
+    decoy_seq = 55555
+    fake = b"TDHCTF{this_is_a_decoy_flag_do_not_submit}"
+    for j in range(6):
+        payload = fake[j * 8 : (j + 1) * 8].ljust(8, b".")
+        tcp = build_tcp(
+            payload=payload,
+            src_ip=decoy_inner_src6,
+            dst_ip=decoy_inner_dst6,
+            sport=12345,
+            dport=80,
+            seq=decoy_seq,
+            ack=1,
+            flags=0x18,
+            window=2048,
+            tsval=(0x11111100 | j),
+            tsecr=0,
+        )
+        decoy_seq += len(payload)
+        inner = build_ipv6(tcp, decoy_inner_src6, decoy_inner_dst6, next_header=6, hop_limit=64, flow_label=0xD00D0 | j)
+        gre = build_gre(inner, proto_type=0x86DD)
+        outer = build_ipv4(gre, src="198.51.100.77", dst="203.0.113.88", proto=47, ident=1000 + j, ttl=60)
+        frame = build_ether_vlan(outer, src=mac_src, dst=mac_dst, vlan=999, ethertype=0x0800)
+        ts_us = (t0 * 1_000_000) + 5_000 + (j * 40_000)
+        frames.append(Frame(ts_us=ts_us, data=frame))
+
+    # Shuffle capture order (solver must reorder by flowlabel index)
+    random.shuffle(frames)
+
+    # Write PCAP
+    out_pcap = os.path.join(out_dir, "net-01-onion-pcap.pcap")
+    with open(out_pcap, "wb") as f:
+        f.write(PCAP_GLOBAL)
+        for fr in frames:
+            ts_sec = fr.ts_us // 1_000_000
+            ts_usec = fr.ts_us % 1_000_000
+            f.write(pcap_pkt(int(ts_sec), int(ts_usec), fr.data))
+
+    # Write player-facing README
+    out_readme = os.path.join(out_dir, "README.txt")
+    with open(out_readme, "w", encoding="utf-8") as f:
+        f.write(
+            "=== NET-01: Onion PCAP — Header Whispers ===\n\n"
+            "You recovered a capture from a Directorate switch span-port.\n"
+            "A rogue engineer is signaling an internal AI node.\n\n"
+            "Files:\n"
+            "- net-01-onion-pcap.pcap\n\n"
+            "Objective:\n"
+            "- Recover BOTH values hidden in the capture:\n"
+            "  - KEY: <challenge key>\n"
+            "  - FLAG: TDHCTF{...}\n\n"
+            "Notes:\n"
+            "- The obvious stream contains a decoy.\n"
+            "- The real message is not in payload.\n"
+        )
+
+    print(f"[+] Wrote {out_pcap}")
+    print(f"[+] Wrote {out_readme}")
+
+
+if __name__ == '__main__':
+    main()
+
+

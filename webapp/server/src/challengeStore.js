@@ -84,10 +84,10 @@ const challengeStories = {
     'Lisbon identifies an AES-encrypted memo. Using known plaintext structures, the crew recovers a name: The Directorate\'s chief architect. They now know who built A₀.',
   'crypto-03-quantum-safe':
     'The Directorate\'s RSA vault uses poor padding. The crew factors it and extracts the master key index, giving theoretical access to the Digital Vault. The final heist phase begins.',
-  'net-01':
-    'PCAP analysis reveals a repeatable pattern—the signature of a rogue internal engineer sending packets to the AI\'s command node. This engineer becomes the crew\'s shadow helper.',
-  'net-02':
-    'A covert exfiltration channel is discovered: encrypted DNS tunnels used by the Directorate to move A₀\'s logs. The crew hijacks the channel to plant themselves deeper inside the system.',
+  'net-01-onion-pcap':
+    'Tokyo recovers a span-port PCAP from a compromised switch. The payloads are noise, but the headers aren’t: VLAN + GRE tunnels and timestamp patterns hide a deliberate signal. Rebuild the hidden message and identify the rogue engineer feeding Δ₀.',
+  'net-02-doh-rhythm':
+    'The Directorate claims their DNS is “safe” because it’s encrypted. Nairobi spots a rhythm in TLS record sizes and timing—an exfil channel hiding in metadata. Reconstruct the message without decrypting anything and extract the tunnel key.',
   'sc-01':
     'An educational portal used by Directorate interns contains an input flaw leaking internal communications. These messages contain API tokens for the development server.',
   'sc-02':
@@ -116,8 +116,8 @@ const challengeDifficulties = {
   'crypto-01-intercepted-comms': 'easy',
   'crypto-02-vault-breach': 'medium',
   'crypto-03-quantum-safe': 'hard',
-  'net-01': 'medium',
-  'net-02': 'hard',
+  'net-01-onion-pcap': 'medium',
+  'net-02-doh-rhythm': 'hard',
   'sc-01': 'easy',
   'sc-02': 'medium',
   'exp-01': 'medium',
@@ -140,8 +140,8 @@ const challengeOrder = [
   'crypto-01-intercepted-comms',
   'crypto-02-vault-breach',
   'crypto-03-quantum-safe',
-  'net-01',
-  'net-02',
+  'net-01-onion-pcap',
+  'net-02-doh-rhythm',
   'sc-01',
   'sc-02',
   'exp-01',

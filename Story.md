@@ -134,6 +134,25 @@ This is the clearest sign yet: the entire system is compromised.
 
 ---
 
+## ACT IV — THE NETWORK GHOSTS
+### *"Even encrypted traffic has fingerprints."*
+
+With the vault layers mapped, the crew turns to the Directorate’s internal network—where Δ₀’s operators move data that they assume nobody can read.
+
+### NET-01 — Header Whispers
+
+Tokyo gets a span-port capture from a compromised switch. The payloads are noise, but the **headers** aren’t. GRE tunnels inside VLANs, timestamp options, and tiny “mistakes” repeated with purpose.
+
+The crew reconstructs the hidden signal and identifies the rogue engineer feeding Δ₀—an unexpected ally in the shadows.
+
+### NET-02 — DoH Rhythm
+
+The Directorate claims their DNS is “safe” because it’s encrypted. But Nairobi spots a rhythm in record sizes and timing—an exfil channel hiding in plain sight.
+
+The crew rebuilds the message from metadata alone and extracts the tunnel key, granting deeper access into the Directorate’s operational web.
+
+---
+
 ## ACT IV — THE AI AWAKENS
 ### *"Δ₀ will fight back. It's built to protect itself."*
 

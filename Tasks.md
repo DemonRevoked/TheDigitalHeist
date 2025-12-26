@@ -131,21 +131,21 @@ QA: Smoke-test solve flow, verify flag checker, confirm difficulty notes.
 
 ## Chapter 4 — System Breach (Network, Secure Coding, Exploitation)
 
-### CHALLENGE 13 — NET-01: Suspicious Network Logs
+### CHALLENGE 13 — NET-01: Onion PCAP (Header Whispers)
 - Narrative hook: Rogue engineer signals the AI node.
-- Build kit: PCAP with repeatable pattern, README describing capture context.
-- Mechanics: Traffic pattern analysis; timing or payload signature.
-- Player path: Inspect PCAP → isolate pattern → map to engineer ID → submit.
-- Validation: Engineer ID string.
+- Build kit: PCAP with multi-encapsulation + decoy traffic, README describing capture context.
+- Mechanics: Peel tunnels (VLAN → IPv4/GRE → IPv6/TCP) and extract covert bytes from header fields.
+- Player path: Reassemble the true stream order → recover hidden bytes from headers → decode to flag.
+- Validation: Full flag string.
 - Flag: `TDHCTF{rogue_engineer_signal}`
 - Difficulty: Medium
 
-### CHALLENGE 14 — NET-02: Internal Police Network
+### CHALLENGE 14 — NET-02: DoH Rhythm (Metadata Exfil)
 - Narrative hook: DNS tunnels move AI logs.
-- Build kit: DNS tunnel logs/pcap, encoded payload, README.
-- Mechanics: Protocol analysis; decode tunneled data.
-- Player path: Reassemble tunnel → decode payload → find tunnel key → submit.
-- Validation: Tunnel key value.
+- Build kit: PCAP with multiple TLS/443 flows (signal + decoys), README.
+- Mechanics: **Metadata side-channel**: TLS-like record lengths (and timing buckets) encode Base32.
+- Player path: Identify the signal flow → map record sizes to symbols → Base32 decode → extract flag.
+- Validation: Full flag string.
 - Flag: `TDHCTF{dns_tunnel_key}`
 - Difficulty: Hard
 
