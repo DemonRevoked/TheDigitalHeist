@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const session = require("express-session");
 const path = require("path");
+const fs = require("fs");
 const PgSession = require("connect-pg-simple")(session);
 
 const { pool, initDb } = require("./storage/db");
@@ -104,7 +105,24 @@ app.get("/admin/tickets", requireLogin, requireAdmin, async (req, res) => {
 
 // The Professor's master plan (admin-only secret endpoint)
 app.get("/admin/flag", requireLogin, requireAdmin, (_req, res) => {
-  res.type("text/plain").send(process.env.FLAG || "FLAG{missing_flag_env}");
+  const flag = process.env.FLAG || "FLAG{missing_flag_env}";
+
+  // Challenge key is dynamic per restart; prefer reading it from the mounted file.
+  // Fallback to CHALLENGE_KEY env var if file is unavailable.
+  let challengeKey = process.env.CHALLENGE_KEY || "missing_challenge_key";
+  const keyFile = process.env.CHALLENGE_KEY_FILE;
+  if (keyFile) {
+    try {
+      if (fs.existsSync(keyFile)) {
+        challengeKey = fs.readFileSync(keyFile, "utf8").trim() || challengeKey;
+      }
+    } catch (_) {
+      // keep fallback
+    }
+  }
+
+  // Return key right next to the flag so bot/XSS exfil captures both.
+  res.type("text/plain").send(`${flag} ${challengeKey}`);
 });
 
 // Reset endpoint (for CTF management - clears tickets and captures)

@@ -180,6 +180,7 @@ services:
       - DATABASE_URL=postgresql://ctf:ticketvault2024@web02-db:5432/ctfdb
       - SESSION_SECRET=ticket_vault_session_secret_2024
       - FLAG=TDHCTF{THE_BOT_DID_THE_DIRTY_WORK}
+      - CHALLENGE_KEY=${WEB02_KEY:-offline-default-web02}
       - RESET_ON_STARTUP=true
       - CHALLENGE_KEY_FILE=/run/secrets/web-02.key
     volumes:
@@ -197,7 +198,7 @@ services:
     environment:
       - BASE_URL=http://web02-ticket-to-the-vault:3000
       - ADMIN_USER=${ADMIN_USER:-admin}
-      - ADMIN_PASS=${ADMIN_PASS:-admin}
+      - ADMIN_PASS=${ADMIN_PASS:-admin123}
       - BOT_INTERVAL_MS=${BOT_INTERVAL_MS:-5000}
     depends_on:
       - web02-ticket-to-the-vault

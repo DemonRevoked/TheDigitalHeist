@@ -190,6 +190,10 @@ start_containers() {
   if [ -f "$KEY_DIR/re-02.key" ]; then
     export RE02_KEY="$(cat "$KEY_DIR/re-02.key" | tr -d '\n\r')"
   fi
+  # Expose web challenge keys to docker-compose dynamically (read from files each run)
+  if [ -f "$KEY_DIR/web-02.key" ]; then
+    export WEB02_KEY="$(cat "$KEY_DIR/web-02.key" | tr -d '\n\r')"
+  fi
   
   $dc -f "$SCRIPT_DIR/docker-compose.yml" up --build -d
   echo "[+] Docker containers started!"
