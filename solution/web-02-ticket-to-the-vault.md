@@ -1,6 +1,6 @@
 # Ticket to the Vault: Short Walkthrough (Stored XSS)
 
-> Educational CTF guide. Target is local: `http://localhost:5002`.
+> Educational CTF guide. Target is local: `targetIP:port`.
 
 ## Objective
 
