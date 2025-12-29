@@ -1,0 +1,9 @@
+node_modules
+npm-debug.log
+.env
+.git
+.gitignore
+CREATORS_GUIDE.md
+STUDENT_GUIDE.md
+.DS_Store
+

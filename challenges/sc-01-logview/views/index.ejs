@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Professor's Log Viewer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;900&family=Roboto+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+      font-family: 'Orbitron', sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    
+    * {
+      box-sizing: border-box;
+    }
+
+    .mono {
+      font-family: 'Roboto Mono', monospace;
+    }
+
+    /* Animated backdrop container */
+    .backdrop-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      z-index: 0;
+      background-color: #000000;
+    }
+
+    #globe-canvas {
+      width: 100%;
+      height: 100%;
+      opacity: 0.3;
+    }
+
+    /* Content layer */
+    .content-layer {
+      position: relative;
+      z-index: 1;
+    }
+
+    .terminal-border {
+      position: relative;
+      border: 1px solid #1a4d2e;
+      backdrop-filter: blur(10px);
+      background-color: rgba(10, 10, 10, 0.87);
+    }
+
+    .terminal-border::before,
+    .terminal-border::after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-style: solid;
+      border-width: 2px;
+    }
+
+    .terminal-border::before {
+      top: -1px;
+      left: -1px;
+      border-right: none;
+      border-bottom: none;
+      border-color: #1a4d2e;
+    }
+
+    .terminal-border::after {
+      bottom: -1px;
+      right: -1px;
+      border-left: none;
+      border-top: none;
+      border-color: #1a4d2e;
+    }
+
+    .corner-tl, .corner-tr, .corner-bl, .corner-br {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      border-style: solid;
+      border-width: 0;
+      border-color: #ff0000;
+    }
+
+    .corner-tl {
+      top: -2px;
+      left: -2px;
+      border-top-width: 3px;
+      border-left-width: 3px;
+    }
+
+    .corner-tr {
+      top: -2px;
+      right: -2px;
+      border-top-width: 3px;
+      border-right-width: 3px;
+    }
+
+    .corner-bl {
+      bottom: -2px;
+      left: -2px;
+      border-bottom-width: 3px;
+      border-left-width: 3px;
+    }
+
+    .corner-br {
+      bottom: -2px;
+      right: -2px;
+      border-bottom-width: 3px;
+      border-right-width: 3px;
+    }
+
+    .log-entry {
+      cursor: pointer;
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+      background-color: rgba(10, 10, 10, 0.8);
+      border-color: #1a4d2e;
+    }
+
+    .log-entry::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 3px;
+      height: 100%;
+      background-color: #ff0000;
+      transform: scaleY(0);
+      transform-origin: top;
+      transition: transform 0.3s ease;
+    }
+
+    .log-entry:hover::before {
+      transform: scaleY(1);
+    }
+
+    .log-entry:hover {
+      background-color: rgba(10, 10, 10, 0.95);
+    }
+
+    .log-entry::after {
+      content: '>';
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0;
+      transition: all 0.3s ease;
+      font-weight: bold;
+      color: #00ff41;
+    }
+
+    .log-entry:hover::after {
+      opacity: 1;
+      right: 15px;
+    }
+
+    .log-details {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .log-details.active {
+      max-height: 600px;
+    }
+
+    .scanline {
+      position: absolute;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(transparent, rgba(0, 255, 65, 0.3), transparent);
+      animation: scan 8s linear infinite;
+      pointer-events: none;
+      box-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+      z-index: 10;
+    }
+
+    @keyframes scan {
+      0% { top: 0%; }
+      100% { top: 100%; }
+    }
+
+    .flicker {
+      animation: flicker 0.15s infinite;
+    }
+
+    @keyframes flicker {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.97; }
+    }
+
+    .glow-text {
+      text-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 8px;
+      animation: pulse 2s ease-in-out infinite;
+      box-shadow: 0 0 10px currentColor;
+      background-color: #ff0000;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.2); }
+    }
+
+    .data-line {
+      border-left: 2px solid #1a4d2e;
+      padding-left: 16px;
+      margin: 8px 0;
+      transition: all 0.2s ease;
+    }
+
+    .data-line:hover {
+      padding-left: 20px;
+    }
+
+    .system-label {
+      font-size: 10px;
+      letter-spacing: 3px;
+      opacity: 0.5;
+    }
+
+    .access-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border: 1px solid #ff0000;
+      font-size: 9px;
+      letter-spacing: 2px;
+      margin-left: 12px;
+      color: #ff0000;
+    }
+
+    .log-box {
+      background-color: rgba(0, 0, 0, 0.5);
+      border-color: #ff0000;
+    }
+  </style>
+ </head>
+ <body class="h-full" style="color: #00ff41; background-color: #000000;"><!-- Animated Backdrop -->
+  <div class="backdrop-container" id="backdrop">
+   <canvas id="globe-canvas"></canvas>
+  </div><!-- Content Layer -->
+  <div class="h-full w-full overflow-auto content-layer">
+   <div id="app-container" class="min-h-full w-full flex items-center justify-center p-8">
+    <div class="w-full max-w-5xl relative"><!-- Scanline Effect -->
+     <div class="scanline"></div><!-- System Header -->
+     <div class="text-center mb-8">
+      <div class="system-label">
+       SECURE BANKING TERMINAL // CLASSIFIED ACCESS
+      </div>
+     </div><!-- Main Title -->
+     <div class="text-center mb-12 flicker">
+      <h1 id="main-title" class="text-5xl font-black tracking-wider mb-4 glow-text" style="color: #00ff41; font-family: 'Orbitron', sans-serif;">The Professor's Log Viewer</h1>
+      <div class="flex items-center justify-center gap-2"><span class="status-dot"></span>
+       <p id="tagline" class="text-sm tracking-widest uppercase opacity-70" style="font-family: 'Orbitron', sans-serif;">A heist is won in the details. Logs are details.</p>
+      </div>
+     </div><!-- Terminal Container -->
+     <div id="terminal-panel" class="terminal-border relative p-10">
+      <div class="corner-tl"></div>
+      <div class="corner-tr"></div>
+      <div class="corner-bl"></div>
+      <div class="corner-br"></div><!-- Available Logs Header -->
+      <div class="mb-8 flex items-center justify-between">
+       <div>
+        <h2 class="text-xs tracking-widest opacity-50 font-medium">AVAILABLE LOGS</h2>
+       </div>
+       <div class="access-badge">
+        LEVEL 5 CLEARANCE
+       </div>
+      </div><!-- Log Entries -->
+      <div class="space-y-4 mb-12">
+       <% logs.forEach((log, index) => { %>
+       <div>
+        <div class="log-entry p-5 flex items-center gap-4 border" onclick="toggleLog(<%= index %>)">
+         <svg class="w-6 h-6 opacity-60" fill="currentColor" viewbox="0 0 20 20"><path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
+         </svg>
+         <div class="flex-1">
+          <div class="mono text-base font-medium tracking-wide"><%= log.filename %></div>
+          <div class="text-xs opacity-40 mt-1">
+           <%= log.filename === 'heist.log' ? 'MISSION_CRITICAL.DAT' : 'RESTRICTED_ACCESS.DAT' %>
+          </div>
+         </div>
+         <div class="text-xs opacity-30 mono">
+          <%= new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }) %>
+         </div>
+         <a href="/download?file=<%= encodeURIComponent(log.filename) %>" class="text-xs opacity-50 hover:opacity-100 ml-4" onclick="event.stopPropagation()">Download</a>
+        </div>
+        <div id="log-details-<%= index %>" class="log-details mt-4">
+         <div class="log-box p-6 border-l-4 ml-8 mono text-sm space-y-3">
+          <% log.lines.forEach(line => { %>
+          <div class="data-line">
+           <span class="opacity-40">[<%= new Date().toLocaleTimeString('en-US', { hour12: false }) %>]</span> 
+           <span class="opacity-80"><%= log.filename === 'heist.log' ? 'SYSTEM' : 'REQUEST' %>:</span> 
+           <%= line.replace(/\[T-\d+:\d+\]/, '').trim() || line.trim() %>
+          </div>
+          <% }); %>
+          <% if (log.filename === 'mint-access.log') { %>
+          <div class="data-line"><span class="opacity-40">[14:03:22]</span> <span class="opacity-80">SYSTEM:</span> <span class="font-bold">⚠ ACCESS BLOCKED</span></div>
+          <div class="data-line"><span class="opacity-40">[14:03:22]</span> <span class="opacity-80">ERROR:</span> Traversal protection engaged.</div>
+          <div class="data-line"><span class="opacity-40">[14:03:25]</span> <span class="opacity-80">SECURITY:</span> Lock engaged on <span class="font-medium">/vault/key</span></div>
+          <div class="data-line"><span class="opacity-40">[14:03:30]</span> <span class="opacity-80">STATUS:</span> Awaiting resolution...</div>
+          <% } else { %>
+          <div class="data-line"><span class="opacity-40">[12:45:23]</span> <span class="opacity-80">SYSTEM:</span> Heist initiated. All teams in position.</div>
+          <div class="data-line"><span class="opacity-40">[12:47:51]</span> <span class="opacity-80">VAULT:</span> Access protocol engaged.</div>
+          <div class="data-line"><span class="opacity-40">[13:02:14]</span> <span class="opacity-80">SECURITY:</span> Bypass <span class="font-bold">SUCCESS</span></div>
+          <div class="data-line"><span class="opacity-40">[13:15:07]</span> <span class="opacity-80">DATA:</span> Extraction in progress...</div>
+          <div class="data-line"><span class="opacity-40">[13:28:42]</span> <span class="opacity-80">MISSION:</span> Phase 1 <span class="font-bold">COMPLETE</span></div>
+          <% } %>
+         </div>
+        </div>
+       </div>
+       <% }); %>
+      </div><!-- Footer System Info -->
+      <div class="mt-8 flex justify-between items-center text-xs opacity-30">
+       <div class="mono">
+        SYS_ID: PROF_001
+       </div>
+       <div class="system-label">
+        TERMINAL_ACTIVE
+       </div>
+      </div>
+     </div><!-- Bottom Label -->
+     <div class="text-center mt-8">
+      <div class="system-label">
+       SECURE CONNECTION ESTABLISHED // END TRANSMISSION
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+  <script>
+    function toggleLog(index) {
+      const details = document.getElementById('log-details-' + index);
+      details.classList.toggle('active');
+    }
+
+    // Globe animation
+    const canvas = document.getElementById('globe-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    let rotation = 0;
+    const numMeridians = 24;
+    const numParallels = 12;
+
+    function getTerminalPanelCenter() {
+      const terminalPanel = document.getElementById('terminal-panel');
+      if (!terminalPanel) {
+        return { x: canvas.width / 2, y: canvas.height / 2 };
+      }
+      const rect = terminalPanel.getBoundingClientRect();
+      const scrollY = window.scrollY || window.pageYOffset;
+      const scrollX = window.scrollX || window.pageXOffset;
+      return {
+        x: rect.left + rect.width / 2 + scrollX,
+        y: rect.top + rect.height / 2 + scrollY
+      };
+    }
+
+    function drawGlobe() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      const terminalCenter = getTerminalPanelCenter();
+      const radius = Math.min(canvas.width, canvas.height) * 0.25;
+      const centerX = terminalCenter.x;
+      const centerY = terminalCenter.y;
+      
+      ctx.strokeStyle = '#1a4d2e';
+      ctx.lineWidth = 1;
+
+      // Draw meridians (longitude lines)
+      for (let i = 0; i < numMeridians; i++) {
+        const angle = (i / numMeridians) * Math.PI * 2 + rotation;
+        ctx.beginPath();
+        
+        for (let j = 0; j <= 50; j++) {
+          const lat = (j / 50) * Math.PI - Math.PI / 2;
+          const x = centerX + radius * Math.cos(lat) * Math.sin(angle);
+          const y = centerY + radius * Math.sin(lat);
+          const z = radius * Math.cos(lat) * Math.cos(angle);
+          
+          if (z > 0) {
+            ctx.globalAlpha = 0.8;
+          } else {
+            ctx.globalAlpha = 0.15;
+          }
+          
+          if (j === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.stroke();
+      }
+
+      // Draw parallels (latitude lines)
+      for (let i = 0; i <= numParallels; i++) {
+        const lat = (i / numParallels) * Math.PI - Math.PI / 2;
+        const parallelRadius = radius * Math.cos(lat);
+        const yPos = centerY + radius * Math.sin(lat);
+        
+        ctx.beginPath();
+        for (let j = 0; j <= 100; j++) {
+          const angle = (j / 100) * Math.PI * 2 + rotation;
+          const x = centerX + parallelRadius * Math.sin(angle);
+          const y = yPos;
+          const z = parallelRadius * Math.cos(angle);
+          
+          if (z > 0) {
+            ctx.globalAlpha = 0.8;
+          } else {
+            ctx.globalAlpha = 0.15;
+          }
+          
+          if (j === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.stroke();
+      }
+
+      // Draw equator highlight
+      ctx.strokeStyle = '#ff0000';
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath();
+      for (let j = 0; j <= 100; j++) {
+        const angle = (j / 100) * Math.PI * 2 + rotation;
+        const x = centerX + radius * Math.sin(angle);
+        const y = centerY;
+        const z = radius * Math.cos(angle);
+        
+        if (z > 0) {
+          ctx.globalAlpha = 0.8;
+        } else {
+          ctx.globalAlpha = 0.2;
+        }
+        
+        if (j === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.stroke();
+
+      rotation += 0.003;
+      requestAnimationFrame(drawGlobe);
+    }
+
+    // Wait for DOM to be ready, then start drawing
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', drawGlobe);
+    } else {
+      drawGlobe();
+    }
+    
+    // Redraw on scroll to keep globe centered on terminal panel
+    let scrollTimeout;
+    window.addEventListener('scroll', () => {
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        // Trigger redraw by updating rotation slightly
+        rotation += 0.001;
+      }, 10);
+    });
+  </script>
+ </body>
+</html>

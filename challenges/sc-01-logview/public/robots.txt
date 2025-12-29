@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /vault/
+Disallow: /source/
+# Source code is hidden but accessible if you know where to look
+
