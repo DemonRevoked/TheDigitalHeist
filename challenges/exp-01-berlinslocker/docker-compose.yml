@@ -1,7 +1,0 @@
-services:
-  lockerctl-medium:
-    build: .
-    env_file:
-      - .env
-    ports:
-      - "2221:22"

@@ -1,9 +1,0 @@
-services:
-  web:
-    build: .
-    environment:
-      PORT: ${PORT}
-      KEY_SECRET: ${KEY_SECRET}
-      FLAG: ${FLAG}
-    ports:
-      - "5102:${PORT}"

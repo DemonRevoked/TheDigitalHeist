@@ -47,7 +47,8 @@ The flag endpoint validates the key against your session and returns the flag if
 1. Copy `.env.example` → `.env` (optional edits)
 2. Start:
    ```bash
-   docker compose up --build
+   # from repo root
+   docker compose up --build sc02-resetpass
    ```
    Or without Docker:
    ```bash
@@ -59,7 +60,8 @@ The flag endpoint validates the key against your session and returns the flag if
 
 ## Run (tests)
 ```bash
-docker compose run --rm web npm test
+# from repo root
+docker compose run --rm sc02-resetpass npm test
 ```
 Or without Docker:
 ```bash

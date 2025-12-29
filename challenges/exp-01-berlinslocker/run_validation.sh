@@ -7,12 +7,12 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONTAINER_NAME="exp-01-berlinslocker_lockerctl-medium_1"
+CONTAINER_NAME="exp01-berlinslocker"
 
 echo "Checking if container is running..."
 if ! sudo docker ps | grep -q "$CONTAINER_NAME"; then
     echo "ERROR: Container $CONTAINER_NAME is not running!"
-    echo "Please start it with: docker-compose up -d"
+    echo "Please start it from the repo root with: docker compose up -d exp01-berlinslocker"
     exit 1
 fi
 

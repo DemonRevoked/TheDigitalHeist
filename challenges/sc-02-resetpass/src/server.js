@@ -9,6 +9,27 @@ const { forgotPassword, resetPassword } = require("./security/reset");
 const { USERS, getUserByEmail, setPasswordForUser } = require("./storage/users");
 const { getSessionKey, validateSessionKey } = require("./utils/keyGenerator");
 
+function getKeySecret() {
+  // Prefer explicit env var, but support reading from a mounted secret file.
+  if (process.env.KEY_SECRET && process.env.KEY_SECRET.trim()) {
+    return process.env.KEY_SECRET.trim();
+  }
+
+  const secretFile =
+    process.env.KEY_SECRET_FILE || process.env.CHALLENGE_KEY_FILE;
+  if (secretFile) {
+    try {
+      const raw = fs.readFileSync(secretFile, "utf8");
+      const trimmed = (raw || "").toString().trim();
+      if (trimmed) return trimmed;
+    } catch (_err) {
+      // fall through to default
+    }
+  }
+
+  return "mint-key-secret";
+}
+
 const app = express();
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "..", "views"));
@@ -76,7 +97,7 @@ app.get("/mint/key", (req, res) => {
   // Get session ID (express-session creates this automatically)
   // req.sessionID is available even before req.session is created
   const sessionId = req.sessionID || "default";
-  const secretKey = process.env.KEY_SECRET || "mint-key-secret";
+  const secretKey = getKeySecret();
   const uniqueKey = getSessionKey(sessionId, secretKey);
   
   res.type("text/plain").send(uniqueKey);
@@ -87,7 +108,7 @@ app.get("/mint/flag", (req, res) => {
   
   // Get session ID for validation
   const sessionId = req.sessionID || "default";
-  const secretKey = process.env.KEY_SECRET || "mint-key-secret";
+  const secretKey = getKeySecret();
   
   if (!validateSessionKey(sessionId, providedKey, secretKey)) {
     return res.status(403).type("text/plain").send("Invalid key");
@@ -101,7 +122,7 @@ app.post("/mint/flag", (req, res) => {
   
   // Get session ID for validation
   const sessionId = req.sessionID || "default";
-  const secretKey = process.env.KEY_SECRET || "mint-key-secret";
+  const secretKey = getKeySecret();
   
   if (!validateSessionKey(sessionId, providedKey, secretKey)) {
     return res.status(403).type("text/plain").send("Invalid key");

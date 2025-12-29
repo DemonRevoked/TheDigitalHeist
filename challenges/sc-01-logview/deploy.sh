@@ -22,41 +22,46 @@ if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/
     exit 1
 fi
 
-# Load environment variables from .env if it exists
+# This challenge is composed from the repository root `docker-compose.yml`.
+# We keep this helper script for convenience, but it must run the root compose.
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+COMPOSE_FILE="$REPO_ROOT/docker-compose.yml"
+
+# Load environment variables from .env if it exists (from this directory)
 if [ -f .env ]; then
     echo "📄 Loading environment variables from .env file..."
     export $(cat .env | grep -v '^#' | xargs)
 else
     echo "⚠️  No .env file found. Using default values."
-    echo "   Create a .env file with PORT, KEY, and FLAG for production."
+    echo "   Create a .env file with SC01_KEY and SC01_FLAG for production."
 fi
 
 # Set defaults if not set
-export PORT=${PORT:-5101}
-export KEY=${KEY:-RDxlT2USNk6yFo1Ejmenl1tkrJ4vGz9T2YKrqOQT}
-export FLAG=${FLAG:-TDHCTF{BELLA_CIAO_NO_MORE_DOT_DOT_SLASH}}
+export PORT=5101
+export SC01_KEY=${SC01_KEY:-RDxlT2USNk6yFo1Ejmenl1tkrJ4vGz9T2YKrqOQT}
+export SC01_FLAG=${SC01_FLAG:-TDHCTF{BELLA_CIAO_NO_MORE_DOT_DOT_SLASH}}
 
 echo ""
 echo "Configuration:"
 echo "  PORT: $PORT"
-echo "  KEY: ${KEY:0:20}..." # Show only first 20 chars
-echo "  FLAG: ${FLAG:0:30}..." # Show only first 30 chars
+echo "  SC01_KEY: ${SC01_KEY:0:20}..." # Show only first 20 chars
+echo "  SC01_FLAG: ${SC01_FLAG:0:30}..." # Show only first 30 chars
 echo ""
 
 # Build and start
 echo "🔨 Building Docker image..."
 if docker compose version &> /dev/null; then
-    docker compose build
+    docker compose -f "$COMPOSE_FILE" build sc01-logview
 else
-    docker-compose build
+    docker-compose -f "$COMPOSE_FILE" build sc01-logview
 fi
 
 echo ""
 echo "🚀 Starting containers..."
 if docker compose version &> /dev/null; then
-    docker compose up -d
+    docker compose -f "$COMPOSE_FILE" up -d sc01-logview
 else
-    docker-compose up -d
+    docker-compose -f "$COMPOSE_FILE" up -d sc01-logview
 fi
 
 # Wait for server to start
@@ -86,16 +91,16 @@ if echo "$HEALTH" | grep -q "ok"; then
     echo ""
     echo "To view logs:"
     if docker compose version &> /dev/null; then
-        echo "  docker compose logs -f web"
+        echo "  docker compose -f \"$COMPOSE_FILE\" logs -f sc01-logview"
     else
-        echo "  docker-compose logs -f web"
+        echo "  docker-compose -f \"$COMPOSE_FILE\" logs -f sc01-logview"
     fi
     echo ""
     echo "To stop:"
     if docker compose version &> /dev/null; then
-        echo "  docker compose down"
+        echo "  docker compose -f \"$COMPOSE_FILE\" stop sc01-logview"
     else
-        echo "  docker-compose down"
+        echo "  docker-compose -f \"$COMPOSE_FILE\" stop sc01-logview"
     fi
 else
     echo "❌ Server health check failed!"
@@ -103,9 +108,9 @@ else
     echo ""
     echo "Check logs:"
     if docker compose version &> /dev/null; then
-        docker compose logs web
+        docker compose -f "$COMPOSE_FILE" logs sc01-logview
     else
-        docker-compose logs web
+        docker-compose -f "$COMPOSE_FILE" logs sc01-logview
     fi
     exit 1
 fi

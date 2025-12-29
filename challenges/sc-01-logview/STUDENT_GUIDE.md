@@ -36,7 +36,8 @@ You've been recruited by The Professor to fix a critical security vulnerability 
 
 1. **Start the application**:
    ```bash
-   docker compose up --build
+   # from repo root
+   docker compose up --build sc01-logview
    ```
 
 2. **Visit the application**: http://localhost:5101

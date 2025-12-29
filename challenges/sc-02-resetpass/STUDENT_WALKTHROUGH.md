@@ -350,7 +350,8 @@ return { message };
    ```bash
    npm start
    # or
-   docker compose up --build
+   # from repo root
+   docker compose up --build sc02-resetpass
    ```
 
 2. **Run tests:**

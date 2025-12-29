@@ -143,7 +143,8 @@ The Jest test suite (`tests/logviewer.test.js`) covers:
 
 2. **Build and Run**
    ```bash
-   docker compose up --build
+   # from repo root
+   docker compose up --build sc01-logview
    ```
 
 3. **Verify Setup**
@@ -155,7 +156,8 @@ The Jest test suite (`tests/logviewer.test.js`) covers:
 
 ```bash
 # Run test suite
-docker compose run --rm web npm test
+# from repo root
+docker compose run --rm sc01-logview npm test
 
 # Manual testing
 curl http://localhost:5101/download?file=heist.log

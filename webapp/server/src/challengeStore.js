@@ -88,12 +88,12 @@ const challengeStories = {
     'Tokyo recovers a span-port PCAP from a compromised switch. The payloads are noise, but the headers aren’t: VLAN + GRE tunnels and timestamp patterns hide a deliberate signal. Rebuild the hidden message and identify the rogue engineer feeding Δ₀.',
   'net-02-doh-rhythm':
     'The Directorate claims their DNS is “safe” because it’s encrypted. Nairobi spots a rhythm in TLS record sizes and timing—an exfil channel hiding in metadata. Reconstruct the message without decrypting anything and extract the tunnel key.',
-  'sc-01':
-    'An educational portal used by Directorate interns contains an input flaw leaking internal communications. These messages contain API tokens for the development server.',
-  'sc-02':
-    'The crew analyzes a file-upload backend that silently overwrites files. This vulnerability becomes their method to replace surveillance logs with fabricated decoy logs—the same tactic the Directorate used, now turned against them.',
-  'exp-01':
-    'A compromised Directorate laptop is locked, but privilege escalation gives the crew access. Inside they find local credentials for the AI training environment.',
+  'sc-01-logview':
+    "The Professor's log viewer is a clean little internal tool… until you notice it can be tricked into reading arbitrary files. Patch the path handling to lock it to the logs directory, then claim the vault key.",
+  'sc-02-resetpass':
+    "A password reset flow guards a Directorate access badge. It's riddled with insecure reset token handling. Rebuild it properly (random tokens, hash-at-rest, expiry, one-time use) to unlock your session key and retrieve the flag.",
+  'exp-01-berlinslocker':
+    "Berlin’s locker controller keeps Mint staging logs rotated — and it runs with elevated privileges. One mistake in how it locates a helper program gives you a foothold for privilege escalation. Break in over SSH and extract the KEY and FLAG.",
   'exp-02':
     'This is the final vault. A chained exploit grants root access to the Directorate\'s central server. Inside, they uncover: the full A₀ source code, the training dataset, communication logs, and instructions for future mass surveillance rollouts. This is the digital equivalent of breaking into the Bank of Spain\'s gold vault.',
   'ai-01-artemis':
@@ -118,9 +118,9 @@ const challengeDifficulties = {
   'crypto-03-quantum-safe': 'hard',
   'net-01-onion-pcap': 'medium',
   'net-02-doh-rhythm': 'hard',
-  'sc-01': 'easy',
-  'sc-02': 'medium',
-  'exp-01': 'medium',
+  'sc-01-logview': 'easy',
+  'sc-02-resetpass': 'medium',
+  'exp-01-berlinslocker': 'medium',
   'exp-02': 'hard',
   'ai-01-artemis': 'easy',
   'ai-02-cerberus': 'hard'
@@ -142,9 +142,9 @@ const challengeOrder = [
   'crypto-03-quantum-safe',
   'net-01-onion-pcap',
   'net-02-doh-rhythm',
-  'sc-01',
-  'sc-02',
-  'exp-01',
+  'sc-01-logview',
+  'sc-02-resetpass',
+  'exp-01-berlinslocker',
   'exp-02',
   'ai-01-artemis',
   'ai-02-cerberus'
@@ -185,16 +185,53 @@ export default class ChallengeStore {
 
   async list() {
     if (this.connected) {
-      return ChallengeModel.find().lean();
+      const fromDb = await ChallengeModel.find().lean();
+      const fromFs = this.loadFromFilesystem();
+
+      // Merge DB + filesystem so newly added on-disk challenges (or definition changes)
+      // always appear on the landing page even if the DB was seeded earlier.
+      const bySlug = new Map();
+      fromDb.forEach((c) => bySlug.set(c.slug, c));
+      fromFs.forEach((c) =>
+        bySlug.set(c.slug, { ...(bySlug.get(c.slug) || {}), ...c })
+      );
+
+      return this.sortChallenges(Array.from(bySlug.values()));
     }
     return this.loadFromFilesystem();
   }
 
   async get(slug) {
     if (this.connected) {
-      return ChallengeModel.findOne({ slug }).lean();
+      const fromDb = await ChallengeModel.findOne({ slug }).lean();
+      const fromFs = this.loadFromFilesystem().find((c) => c.slug === slug);
+      if (!fromDb) return fromFs;
+      if (!fromFs) return fromDb;
+      return { ...fromDb, ...fromFs };
     }
     return this.loadFromFilesystem().find((c) => c.slug === slug);
+  }
+
+  sortChallenges(items) {
+    // Sort by difficulty first (easy, medium, hard), then by narrative order within each difficulty
+    return items.sort((a, b) => {
+      // First, sort by difficulty
+      const difficultyA =
+        difficultyOrder[a.difficulty] || difficultyOrder['unknown'];
+      const difficultyB =
+        difficultyOrder[b.difficulty] || difficultyOrder['unknown'];
+      if (difficultyA !== difficultyB) {
+        return difficultyA - difficultyB;
+      }
+      // If same difficulty, sort by narrative order
+      const ia = challengeOrder.indexOf(a.slug);
+      const ib = challengeOrder.indexOf(b.slug);
+      const va = ia === -1 ? Number.MAX_SAFE_INTEGER : ia;
+      const vb = ib === -1 ? Number.MAX_SAFE_INTEGER : ib;
+      if (va !== vb) return va - vb;
+      // If not in narrative order, sort alphabetically
+      return a.slug.localeCompare(b.slug);
+    });
   }
 
   loadFromFilesystem() {
@@ -240,6 +277,11 @@ export default class ChallengeStore {
         sshCredentials.password = 'RedCipher@2';
         sshCredentials.host = this.sshHost; // Will be set in API if not provided
         sshCredentials.port = 2223;
+      } else if (slug === 'exp-01-berlinslocker') {
+        sshCredentials.username = 'tokyo';
+        sshCredentials.password = 'tokyo123';
+        sshCredentials.host = this.sshHost; // Will be set in API if not provided
+        sshCredentials.port = 2221;
       }
       
       // Add platform URLs for challenges that have web interfaces
@@ -259,6 +301,12 @@ export default class ChallengeStore {
         platformUrl.host = this.sshHost; // Will be set in API if not provided
       } else if (slug === 'web-03-safehouse') {
         platformUrl.port = 5003;
+        platformUrl.host = this.sshHost; // Will be set in API if not provided
+      } else if (slug === 'sc-01-logview') {
+        platformUrl.port = 5101;
+        platformUrl.host = this.sshHost; // Will be set in API if not provided
+      } else if (slug === 'sc-02-resetpass') {
+        platformUrl.port = 5102;
         platformUrl.host = this.sshHost; // Will be set in API if not provided
       }
       
@@ -287,23 +335,7 @@ export default class ChallengeStore {
       };
     });
 
-    // Sort by difficulty first (easy, medium, hard), then by narrative order within each difficulty
-    return items.sort((a, b) => {
-      // First, sort by difficulty
-      const difficultyA = difficultyOrder[a.difficulty] || difficultyOrder['unknown'];
-      const difficultyB = difficultyOrder[b.difficulty] || difficultyOrder['unknown'];
-      if (difficultyA !== difficultyB) {
-        return difficultyA - difficultyB;
-      }
-      // If same difficulty, sort by narrative order
-      const ia = challengeOrder.indexOf(a.slug);
-      const ib = challengeOrder.indexOf(b.slug);
-      const va = ia === -1 ? Number.MAX_SAFE_INTEGER : ia;
-      const vb = ib === -1 ? Number.MAX_SAFE_INTEGER : ib;
-      if (va !== vb) return va - vb;
-      // If not in narrative order, sort alphabetically
-      return a.slug.localeCompare(b.slug);
-    });
+    return this.sortChallenges(items);
   }
 
   collectFiles(basePath, mapper) {

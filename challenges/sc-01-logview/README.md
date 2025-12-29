@@ -48,7 +48,8 @@ The server unlocks `/vault/key` only if its **startup self-check** confirms the 
 
 2. **Deploy with Docker:**
    ```bash
-   docker compose up --build -d
+   # from repo root
+   docker compose up --build -d sc01-logview
    ```
 
 3. **Provide students with URL:**
@@ -59,7 +60,8 @@ See [CREATORS_GUIDE.md](CREATORS_GUIDE.md) for detailed deployment instructions.
 
 ### Run Tests
 ```bash
-docker compose run --rm web npm test
+# from repo root
+docker compose run --rm sc01-logview npm test
 ```
 
 ---

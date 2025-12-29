@@ -21,13 +21,12 @@ Secrets are **not** embedded into image layers. They are generated at container 
 - `CTF_FLAG` → `/root/flag.txt`
 
 ### Recommended deployment pattern
-1. Copy `.env.example` → `.env`
-2. Set per-instance values:
-   - `CTF_KEY=...`
-   - `CTF_FLAG=...`
-3. Deploy:
+1. Set per-instance values (environment or repo `.env`):
+   - `EXP01_KEY=...`
+   - `EXP01_FLAG=...`
+2. Deploy (from repo root):
 ```bash
-docker compose up --build -d
+docker compose up --build -d exp01-berlinslocker
 ```
 
 ## Intended solve outline (high-level)
