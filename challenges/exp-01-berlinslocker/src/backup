@@ -1,0 +1,6 @@
+#!/bin/bash
+# Intended helper invoked by lockerctl.
+set -e
+LOGFILE="$1"
+echo "[backup] rotated: $LOGFILE at $(date -u +%FT%TZ)" >> /var/log/lockerctl/backup-actions.log
+exit 0

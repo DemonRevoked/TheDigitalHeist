@@ -1,0 +1,3 @@
+[lockerctl] INFO: Deployed by Berlin for Mint staging area.
+[lockerctl] INFO: Runs with elevated privileges to rotate locker logs.
+[lockerctl] INFO: Uses external helper: backup
