@@ -1,0 +1,1 @@
+* * * * * root /opt/rotation/rotate.sh >/dev/null 2>&1
