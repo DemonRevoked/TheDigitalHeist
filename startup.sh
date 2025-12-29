@@ -122,20 +122,11 @@ generate_all_keys() {
   mkdir -p "$CHALLENGE_FILES_DIR/crypto-01-intercepted-comms"
   mkdir -p "$CHALLENGE_FILES_DIR/crypto-02-vault-breach"
   mkdir -p "$CHALLENGE_FILES_DIR/crypto-03-quantum-safe"
+  mkdir -p "$CHALLENGE_FILES_DIR/df-01-night-walk-photo"
+  mkdir -p "$CHALLENGE_FILES_DIR/df-02-burned-usb"
   mkdir -p "$CHALLENGE_FILES_DIR/net-01-onion-pcap"
   mkdir -p "$CHALLENGE_FILES_DIR/net-02-doh-rhythm"
   echo "[+] Challenge file directories created"
-
-  # Generate offline network challenge artifacts (PCAPs) so they are downloadable from the landing page.
-  # Pure python; no external deps.
-  if command -v python3 >/dev/null 2>&1; then
-    echo "[*] Generating NET challenge artifacts..."
-    python3 "$SCRIPT_DIR/challenges/net-01-onion-pcap/src/generate_pcap.py" >/dev/null 2>&1 || echo "[!] NET-01 PCAP generation failed (continuing)"
-    python3 "$SCRIPT_DIR/challenges/net-02-doh-rhythm/src/generate_pcap.py" >/dev/null 2>&1 || echo "[!] NET-02 PCAP generation failed (continuing)"
-    echo "[+] NET challenge artifact generation step complete"
-  else
-    echo "[!] python3 not found; skipping NET artifact generation"
-  fi
 
   key1=$(generate_key "Pz1aQw9L" "nE7rVb5C")   # RE-01
   key2=$(generate_key "Dx4kHt2M" "yL6uFp8S")   # RE-02
@@ -163,8 +154,11 @@ generate_all_keys() {
   echo "$key2"  > "$KEY_DIR/re-02.key"
   echo "$key3"  > "$KEY_DIR/mob-01.key"
   echo "$key4"  > "$KEY_DIR/mob-02.key"
+  # Keep backward-compatible names AND slug-based names for file generators.
   echo "$key5"  > "$KEY_DIR/df-01.key"
+  echo "$key5"  > "$KEY_DIR/df-01-night-walk-photo.key"
   echo "$key6"  > "$KEY_DIR/df-02.key"
+  echo "$key6"  > "$KEY_DIR/df-02-burned-usb.key"
   echo "$key7"  > "$KEY_DIR/web-01.key"
   echo "$key8"  > "$KEY_DIR/web-02.key"
   echo "$key9"  > "$KEY_DIR/web-03.key"
@@ -184,6 +178,23 @@ generate_all_keys() {
   echo "$key20" > "$KEY_DIR/ai-02.key"
 
   echo "[+] 20 keys generated and saved under $KEY_DIR/*.key"
+
+  # Generate offline network challenge artifacts (PCAPs) so they are downloadable from the landing page.
+  # IMPORTANT: this must run AFTER keys are written so KEY:<...> is embedded into the PCAP each startup.
+  # Pure python; no external deps.
+  if command -v python3 >/dev/null 2>&1; then
+    echo "[*] Generating NET challenge artifacts (embedding per-startup keys)..."
+    python3 "$SCRIPT_DIR/challenges/net-01-onion-pcap/src/generate_pcap.py" >/dev/null 2>&1 || echo "[!] NET-01 PCAP generation failed (continuing)"
+    python3 "$SCRIPT_DIR/challenges/net-02-doh-rhythm/src/generate_pcap.py" >/dev/null 2>&1 || echo "[!] NET-02 PCAP generation failed (continuing)"
+    echo "[+] NET challenge artifact generation step complete"
+
+    echo "[*] Generating DF challenge artifacts (embedding per-startup keys)..."
+    python3 "$SCRIPT_DIR/challenges/df-01-night-walk-photo/src/generate_photo.py" >/dev/null 2>&1 || echo "[!] DF-01 photo generation failed (continuing)"
+    python3 "$SCRIPT_DIR/challenges/df-02-burned-usb/src/generate_usb_image.py" >/dev/null 2>&1 || echo "[!] DF-02 USB image generation failed (continuing)"
+    echo "[+] DF challenge artifact generation step complete"
+  else
+    echo "[!] python3 not found; skipping NET artifact generation"
+  fi
 }
 
 # ============================================
@@ -226,9 +237,9 @@ main() {
   echo "  The Digital Heist Setup Script"
   echo "=========================================="
 
-  install_dependencies          # disabled for dev env
-  setup_ssh_user                # disabled for dev env
-  ensure_docker_running         # assume docker is already running in dev
+  #install_dependencies          # disabled for dev env
+  #setup_ssh_user                # disabled for dev env
+  #ensure_docker_running         # assume docker is already running in dev
   generate_all_keys
   start_containers
 

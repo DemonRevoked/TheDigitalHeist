@@ -1,5 +1,7 @@
 re-01-confession-app = TDHCTF{confession_gateway_phrase}
 re-02-evidence-tampering = TDHCTF{tampered_time_offset}
+df-01-night-walk-photo = TDHCTF{exif_shadow_unit}
+df-02-burned-usb = TDHCTF{carved_network_node}
 crypto-01-intercepted-comms = TDHCTF{intercepted_comms_decrypted}
 crypto-02-vault-breach = TDHCTF{vault_breach_decrypted}
 crypto-03-quantum-safe = TDHCTF{quantum_safe_decrypted}

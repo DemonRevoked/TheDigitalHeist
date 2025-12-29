@@ -44,6 +44,20 @@ Analyzing the tool reveals their tactics: they don't just delete evidence—they
 
 This knowledge becomes the crew's insurance policy. If the Directorate can manipulate time, so can they.
 
+### MOB-01 — Best Friend’s Backup
+
+Rio obtains an Android cloud backup from a Directorate operative’s device—an accidental leak from inside their own ranks.
+In the SMS database, a “deleted” thread isn’t truly gone. The crew recovers it and extracts a small but critical authentication hint.
+
+The Directorate’s mobile ecosystem is the next door.
+
+### MOB-02 — Fake Safety App
+
+Tokyo tears apart a polished “Safety” APK the Directorate pushes to the public.
+The UI is harmless; the code is not. Buried in the decompiled logic is a covert beacon endpoint—an API the app quietly calls to report movement and identity signals.
+
+Now the crew knows where the Directorate listens.
+
 ---
 
 ## ACT II — THE VAULT LAYERS
@@ -134,7 +148,28 @@ This is the clearest sign yet: the entire system is compromised.
 
 ---
 
-## ACT IV — THE NETWORK GHOSTS
+## ACT IV — INTELLIGENCE GATHERING (FORENSICS)
+### *"Evidence doesn’t disappear. It just changes shape."*
+
+Before the crew can trust anything inside the Directorate’s systems, they need truth anchors—artifacts that still leak reality even after “cleanup.”
+
+### DF-01 — The Night Walk Photo
+
+A field agent posts a photo online. The Directorate scrubs and reshapes the metadata, but they miss what matters.
+Nairobi reconstructs the image’s operational trail from what remains—EXIF scars, comment fields, contradictory timestamps—and identifies the hidden unit behind the operation.
+
+It’s proof: the surveillance chain is bigger than the Directorate admits.
+
+### DF-02 — Burned USB
+
+From a cleanup burn bag, the crew recovers a half-destroyed USB stick: scorched plastic, corrupted sectors, and fragments of what looks like a network blueprint.
+Denver carves what he can, reassembles what he can’t, and extracts a pivot node label tied to the Safehouse’s evidence hash registry.
+
+They now have the equivalent of a vault blueprint—drawn from ash.
+
+---
+
+## ACT V — THE NETWORK GHOSTS
 ### *"Even encrypted traffic has fingerprints."*
 
 With the vault layers mapped, the crew turns to the Directorate’s internal network—where Δ₀’s operators move data that they assume nobody can read.
@@ -153,7 +188,36 @@ The crew rebuilds the message from metadata alone and extracts the tunnel key, g
 
 ---
 
-## ACT IV — THE AI AWAKENS
+## ACT VI — THE SYSTEM BREACH
+### *"If they rewrite history, we rewrite the outcome."*
+
+With truth anchors recovered and the Directorate’s internal map exposed, the crew turns weaknesses into leverage.
+
+### SC-01 — Student Portal Bug
+
+An intern-facing portal leaks more than it should. A tiny validation bypass becomes a window into internal messages—enough to reveal a development token the Directorate assumed would never leave the building.
+
+### SC-02 — Evidence Upload Script
+
+The Directorate’s evidence upload pipeline has a quiet flaw: an overwrite path nobody audited.
+Lisbon weaponizes it, proving the crew can replace stored evidence the same way the Directorate does—only this time, the replacement exposes the lie instead of hiding it.
+
+### EXP-01 — Locked Laptop
+
+A seized field laptop is “locked down,” but not secure. Helsinki finds a privilege escalation path and extracts credentials pointing to the AI training environment.
+
+The crew is inside the inner perimeter now.
+
+### EXP-02 — Police Server Root
+
+The final server is hardened, segmented, and watched—yet still human-made. A chained breach yields root.
+Behind that access: the architecture, the logs, and the operational playbooks that prove Δ₀ is real and autonomous.
+
+The digital vault is no longer a rumor. It’s a crime scene.
+
+---
+
+## ACT VII — THE AI AWAKENS
 ### *"Δ₀ will fight back. It's built to protect itself."*
 
 Just when the heist seems complete, the Professor warns the crew of the final obstacle.

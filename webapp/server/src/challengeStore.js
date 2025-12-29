@@ -68,10 +68,10 @@ const challengeStories = {
     'To infiltrate the Directorate\'s mobile ecosystem, Rio obtains an Android cloud backup of an operative\'s phone. The team extracts deleted SMS threads containing network authentication hints. These form the first foothold into their infrastructure.',
   'mob-02':
     'Tokyo uncovers a Directorate "Safety App" secretly tracking citizens. APK analysis identifies the tracking API endpoint—a covert beacon server that doubles as a clandestine command channel. This beacon server becomes the crew\'s entry tunnel.',
-  'df-01':
-    'A Directorate field agent posts a photo online. The crew performs EXIF reconstruction and light analysis, revealing a hidden operational unit behind the agent. This confirms multiple nodes in the Directorate\'s surveillance chain.',
-  'df-02':
-    'A half-destroyed USB stick retrieved by Nairobi contains scrambled operational files. File carving reveals a fragmented network diagram of the Directorate\'s core systems—the digital equivalent of the Royal Mint blueprint.',
+  'df-01-night-walk-photo':
+    'A Directorate field agent posts a photo online. The crew performs EXIF reconstruction and metadata analysis, revealing a hidden operational unit behind the agent. This confirms multiple nodes in the Directorate’s surveillance chain.',
+  'df-02-burned-usb':
+    'A half-destroyed USB stick retrieved by Nairobi contains scrambled operational files. File carving reveals a fragmented network diagram of the Directorate’s core systems—the digital equivalent of the Royal Mint blueprint.',
   'web-01-royalmint':
     'Behind a public memorial page, Denver brute-forces directories and finds deleted policy documents explaining how A₀ automates digital manipulation. This is proof the AI exists.',
   'web-02-ticket-to-the-vault':
@@ -108,8 +108,8 @@ const challengeDifficulties = {
   're-02-evidence-tampering': 'hard',
   'mob-01': 'easy',
   'mob-02': 'hard',
-  'df-01': 'medium',
-  'df-02': 'hard',
+  'df-01-night-walk-photo': 'medium',
+  'df-02-burned-usb': 'hard',
   'web-01-royalmint': 'easy',
   'web-02-ticket-to-the-vault': 'medium',
   'web-03-safehouse': 'hard',
@@ -132,8 +132,8 @@ const challengeOrder = [
   're-02-evidence-tampering',
   'mob-01',
   'mob-02',
-  'df-01',
-  'df-02',
+  'df-01-night-walk-photo',
+  'df-02-burned-usb',
   'web-01-royalmint',
   'web-02-ticket-to-the-vault',
   'web-03-safehouse',

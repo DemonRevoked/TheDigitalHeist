@@ -10,8 +10,8 @@ One flow carries a length/timing side-channel:
 Players should not be able to decrypt payload. They recover the flag from metadata only.
 
 Output:
-  challenge-files/net-02/capture.pcap
-  challenge-files/net-02/README.txt
+  challenge-files/net-02-doh-rhythm/net-02-doh-rhythm.pcap
+  challenge-files/net-02-doh-rhythm/README.txt
 """
 
 from __future__ import annotations

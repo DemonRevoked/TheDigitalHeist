@@ -1,108 +1,95 @@
 # net-01-onion-pcap — Walkthrough (Onion PCAP / Header Whispers)
 
 ## Goal
-Recover **both** values from `challenge-files/net-01-onion-pcap/net-01-onion-pcap.pcap`:
-- `KEY: <challenge key>`
-- `FLAG: TDHCTF{...}`
+Recover **both** values from:
+- `challenge-files/net-01-onion-pcap/net-01-onion-pcap.pcap`
 
-## What’s going on (high level)
-The “real” data is **not in payload** (the capture also contains lots of noise/decoys to slow analysis):
-- Packets are VLAN tagged
-- Outer IPv4 carries **GRE**
-- GRE contains inner IPv6/TCP
-- Each flag byte is split across:
-  - outer IPv4 **Identification** low byte
-  - inner TCP **Timestamp (TSval)** low byte
-- Packets are **shuffled**; the correct index is stored in IPv6 **flow label** low 12 bits
-
-## Solve outline
-### 1) Open and isolate the real tunnel in Wireshark
-1. Open `net-01-onion-pcap.pcap` in Wireshark.
-2. Apply a first-pass filter to cut the noise:
-   - `vlan && ip.proto == 47`
-3. Click a packet and expand layers:
-   - `Ethernet II`
-   - `802.1Q Virtual LAN`
-   - `Internet Protocol Version 4`
-   - `Generic Routing Encapsulation (GRE)`
-   - `Internet Protocol Version 6`
-   - `Transmission Control Protocol`
-4. Confirm you’re looking at the **signal** flow (not decoys) by checking the *inner* tuple is consistent across many packets:
-   - Inner IPv6 src/dst stays the same
-   - Inner TCP src port/dst port stays the same
-
-### 2) Add columns for the fields you need
-Add these as columns (right-click field → **Apply as Column**):
-- **IPv6 flow label**: `ipv6.flow`
-- **IPv4 identification**: `ip.id`
-- **TCP TSval**: expand `TCP > Options > Timestamps` and add `tcp.options.timestamp.tsval`
-- **TCP srcport / dstport**: `tcp.srcport`, `tcp.dstport` (only needed once to compute the 1-byte key)
-
-### 3) Sort into message order
-The packets are intentionally shuffled. The ordering index is:
-- `idx = (ipv6.flow) & 0x0fff`
-
-In Wireshark:
-1. Click the **IPv6 flow label** column header to sort.
-2. If you want to be extra safe, add a display filter that keeps only the one inner stream you identified (right-click the inner IPv6 src/dst and ports → “Apply as Filter”).
-
-### 4) Export the packet list as CSV
-1. Go to **File → Export Packet Dissections → As CSV…**
-2. Export the **Displayed** packets (not “All packets”).
-3. Ensure your CSV contains the columns you added: flow label, ip.id, tsval, srcport, dstport.
-
-### 5) Reconstruct the message (KEY + FLAG)
-For each packet in sorted order, compute:
-- `c = (ip.id & 0xff) XOR (tsval & 0xff)`
-- `key = (tcp.srcport XOR tcp.dstport) & 0xff`
-- `plain[i] = c XOR key XOR i`
-
-Example reconstruction script (feed it your exported CSV):
-
-```python
-import csv
-import re
-
-def hx(v):
-    # wireshark may export hex like "0x9c40" or decimal like "40000"
-    v = v.strip()
-    if v.lower().startswith("0x"):
-        return int(v, 16)
-    return int(v)
-
-rows = []
-with open("export.csv", newline="") as f:
-    r = csv.DictReader(f)
-    for row in r:
-        flow = hx(row["ipv6.flow"])
-        idx = flow & 0x0fff
-        ip_id = hx(row["ip.id"])
-        tsval = hx(row["tcp.options.timestamp.tsval"])
-        sport = int(row["tcp.srcport"])
-        dport = int(row["tcp.dstport"])
-        rows.append((idx, ip_id, tsval, sport, dport))
-
-rows.sort(key=lambda x: x[0])
-sport = rows[0][3]
-dport = rows[0][4]
-key = (sport ^ dport) & 0xff
-
-out = bytearray()
-for i, (_idx, ip_id, tsval, _s, _d) in enumerate(rows):
-    c = (ip_id & 0xff) ^ (tsval & 0xff)
-    out.append((c ^ key ^ (i & 0xff)) & 0xff)
-
-text = out.decode("utf-8", errors="replace").strip()
-print(text)
-print("FLAG =", re.search(r"TDHCTF\\{[^}]+\\}", text).group(0))
+Expected output format:
+```
+KEY:<challenge key>
+FLAG:TDHCTF{...}
 ```
 
-You should see output like:
-- `KEY:<...>`
-- `FLAG:TDHCTF{...}`
+## What you’re looking for (1 paragraph)
+Most traffic is noise. The *real* packets have this stack:
+`802.1Q (VLAN) → IPv4 → GRE → IPv6 → TCP`
 
-## Author verifier
-You can validate locally using:
+Each packet hides **one ASCII character** in the **low byte** of the outer IPv4 **Identification** field (`ip.id`).  
+Packets are **out of order**, but the inner IPv6 **Flow Label is the packet index**, so simple sorting works.
+
+## Step-by-step (Wireshark UI only)
+
+### 1) Open the PCAP
+- **File → Open…** → select `net-01-onion-pcap.pcap` → **Open**
+
+### 2) Reduce noise to “GRE inside VLAN”
+1. Click the **Display Filter** bar.
+2. Paste:
+   - `vlan && ip.proto == 47`
+3. Press **Enter**.
+
+You should now see packets where the middle pane shows:
+`Internet Protocol Version 4 → Generic Routing Encapsulation (GRE) → Internet Protocol Version 6 → TCP`
+
+### 3) Isolate the ONE inner IPv6/TCP conversation (this is the important part)
+There are decoy GRE packets. You want the single inner stream that repeats.
+
+#### Option A (fastest): Conversation Filter
+1. Click any packet that shows inner **IPv6** and **TCP** in the Packet Details pane.
+2. Right‑click that packet in the top packet list.
+3. Choose:
+   - **Conversation Filter → IPv6**
+4. Now add TCP ports too (so it’s one flow, not “all IPv6 between two hosts”):
+   - Click a packet → expand **Transmission Control Protocol**
+   - Right‑click **Source Port** → **Apply as Filter → Selected**
+   - Right‑click **Destination Port** → **Apply as Filter → Selected**
+
+#### Option B (always works): Apply-as-filter from fields
+1. Click a packet.
+2. In Packet Details, expand **Internet Protocol Version 6**:
+   - Right‑click **Source Address** → **Apply as Filter → Selected**
+   - Right‑click **Destination Address** → **Apply as Filter → Selected**
+3. Expand **Transmission Control Protocol**:
+   - Right‑click **Source Port** → **Apply as Filter → Selected**
+   - Right‑click **Destination Port** → **Apply as Filter → Selected**
+
+After this, your filter bar should look like:
+`vlan && ip.proto == 47 && ipv6.src == ... && ipv6.dst == ... && tcp.srcport == ... && tcp.dstport == ...`
+
+If you did it right, the packet count drops to a **single clean stream**.
+
+### 4) Add the columns you need (2 columns)
+Add these as columns (Packet Details → right‑click field → **Apply as Column**):
+- **Flow Label**:
+  - Expand **Internet Protocol Version 6**
+  - Click **Flow Label** → **Apply as Column**
+- **IPv4 Identification**:
+  - Expand **Internet Protocol Version 4**
+  - Click **Identification** → **Apply as Column**
+
+If the bottom bytes pane isn’t visible:
+- **View → Packet Bytes**
+
+### 5) Sort into message order
+1. Click the **Flow Label** column header to sort.
+2. Click again if needed so it’s **ascending**.
+
+### 6) Read the hidden text (character-by-character)
+For each packet from top to bottom (now in order):
+1. Click the packet.
+2. In Packet Details: **Internet Protocol Version 4 → Identification**
+3. In **Packet Bytes**:
+   - Two bytes are highlighted (IPv4 ID is 2 bytes)
+   - Take the **second highlighted byte** (the low byte)
+   - Read its ASCII character from the right-side ASCII view and append it to your output
+
+Within a short number of packets you’ll see:
+```
+KEY:...
+FLAG:TDHCTF{...}
+```
+
+## Author verifier (optional)
 - `python3 challenges/net-01-onion-pcap/src/verify_decode.py`
 
 

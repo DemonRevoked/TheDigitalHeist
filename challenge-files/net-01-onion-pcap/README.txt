@@ -14,3 +14,4 @@ Objective:
 Notes:
 - The obvious stream contains a decoy.
 - The real message is not in payload.
+- Order is not capture order.

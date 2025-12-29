@@ -10,8 +10,8 @@ Writes a classic PCAP containing:
 - Decoy flows (including a fake flag in payload)
 
 Output:
-  challenge-files/net-01/capture.pcap
-  challenge-files/net-01/README.txt
+  challenge-files/net-01-onion-pcap/net-01-onion-pcap.pcap
+  challenge-files/net-01-onion-pcap/README.txt
 """
 
 from __future__ import annotations
@@ -203,7 +203,6 @@ def main() -> None:
     inner_dst6 = "2001:db8:1337::20"
     sport = 41414
     dport = 443
-    key = (sport ^ dport) & 0xFF
 
     # Outer transport (GRE over IPv4, VLAN tagged)
     outer_src4 = "198.51.100.10"
@@ -315,12 +314,13 @@ def main() -> None:
     base_ts = 0x4A00_0000
 
     for i, b in enumerate(message):
-        # ciphertext byte depends on position too (forces correct ordering)
-        c = b ^ key ^ (i & 0xFF)
-
-        # Split across fields: c = (ip_id_low ^ tsval_low)
-        ip_id_low = random.randrange(0, 256)
-        ts_low = ip_id_low ^ c
+        # MEDIUM DIFFICULTY: no key derivation, no per-index XOR.
+        # Players only need to:
+        #   - reorder by IPv6 flow label low 12 bits
+        #   - read plaintext byte from IPv4 Identification low byte
+        ip_id_low = b
+        # Keep TSval looking "normal" (not part of decode for medium).
+        ts_low = random.randrange(0, 256)
 
         ip_id = (base_id + i) & 0xFFFF
         ip_id = (ip_id & 0xFF00) | ip_id_low
@@ -328,8 +328,10 @@ def main() -> None:
         tsval = (base_ts + (i * 9973)) & 0xFFFFFFFF
         tsval = (tsval & 0xFFFFFF00) | ts_low
 
-        # Index is NOT capture order: stored in IPv6 flowlabel low 12 bits
-        flow_label = (random.randrange(0, 1 << 20) & 0xFFFF000) | (i & 0xFFF)
+        # IMPORTANT (medium / Wireshark-UI-only):
+        # Make ordering trivial by sorting directly on the IPv6 Flow Label column.
+        # So Flow Label == packet index.
+        flow_label = i & 0xFFFFF
 
         # Payload is high-entropy (avoid easy "follow stream" recoveries)
         payload = os.urandom(random.choice([18, 23, 31, 37]))
@@ -420,6 +422,7 @@ def main() -> None:
             "Notes:\n"
             "- The obvious stream contains a decoy.\n"
             "- The real message is not in payload.\n"
+            "- Order is not capture order.\n"
         )
 
     print(f"[+] Wrote {out_pcap}")

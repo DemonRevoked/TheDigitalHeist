@@ -147,13 +147,8 @@ def main() -> None:
     recs = parse_net01_records(frames)
     recs.sort(key=lambda r: r.idx)
 
-    # Reconstruct ciphertext byte: c = ip_id_low ^ ts_low
-    cbytes = bytes((_u16(r.ip_id_low) ^ _u16(r.ts_low)) & 0xFF for r in recs)
-
-    # Decrypt: b = c ^ key ^ idx
-    # key = (sport ^ dport) & 0xFF = (41414 ^ 443) & 0xFF
-    key = (41414 ^ 443) & 0xFF
-    plain = bytes((c ^ key ^ (i & 0xFF)) & 0xFF for i, c in enumerate(cbytes))
+    # MEDIUM DIFFICULTY: plaintext byte is stored directly in IPv4 Identification low byte.
+    plain = bytes((_u16(r.ip_id_low) & 0xFF) for r in recs)
     # Expected format:
     #   KEY:<...>
     #   FLAG:TDHCTF{...}
