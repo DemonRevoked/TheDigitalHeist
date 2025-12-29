@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mint Access Badge Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;900&family=Roboto+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css"/>
+  <!-- To fix the code, you'll need to access the editor. Look for /editor -->
+</head>
+<body>
+  <!-- Animated Backdrop -->
+  <div class="backdrop-container" id="backdrop">
+    <canvas id="globe-canvas"></canvas>
+  </div>
+  
+  <!-- Content Layer -->
+  <div class="content-layer">
+    <div class="container">
+      <div class="scanline"></div>
+      
+      <div class="text-center mb-8">
+        <div class="system-label">SECURE BANKING TERMINAL // CLASSIFIED ACCESS</div>
+      </div>
+      
+      <div class="text-center mb-10 flicker">
+        <h1 class="glow-text">Mint Access Badge Portal</h1>
+      </div>
+      
+      <div class="section-header">
+        <h2 style="margin: 0;">MISSION BRIEFING</h2>
+      </div>
+      <p class="muted mono" style="font-size: 1.1rem; line-height: 1.8;">Professor: "Reset flows are where systems bleed."</p>
+
+      <div class="section-header" style="margin-top: 32px;">
+        <h2 style="margin: 0;">ACTIONS</h2>
+      </div>
+      <% if (!user) { %>
+        <div style="margin: 20px 0;">
+          <a class="btn secondary" href="/login">Login</a>
+          <a class="btn secondary" href="/forgot">Forgot password</a>
+          <a class="btn secondary" href="/reset">Reset password</a>
+        </div>
+      <% } else { %>
+        <div style="margin: 20px 0;">
+          <p style="margin-bottom: 16px;">Logged in as <b style="color: #00ff41;"><%= user.email %></b></p>
+          <a class="btn secondary" href="/badge">My badge</a>
+          <form method="post" action="/logout" style="display:inline">
+            <button class="btn secondary" type="submit">Logout</button>
+          </form>
+        </div>
+      <% } %>
+
+      <div class="section-header" style="margin-top: 32px;">
+        <h2 style="margin: 0;">OBJECTIVE</h2>
+      </div>
+      <div class="glass-card" style="padding: 24px; margin-top: 16px;">
+        <div style="display: flex; align-items: flex-start; margin-bottom: 16px;">
+          <span class="step-number">1</span>
+          <div style="flex: 1;">
+            <h3 style="margin: 0 0 8px 0; font-size: 1.2rem;">Secure the Reset Flow</h3>
+            <p class="mono" style="opacity: 0.8; margin: 0;">Fix vulnerabilities in <code>src/security/reset.js</code> to pass all security checks and unlock the KEY at <code>/mint/key</code></p>
+          </div>
+        </div>
+        <div style="display: flex; align-items: flex-start;">
+          <span class="step-number">2</span>
+          <div style="flex: 1;">
+            <h3 style="margin: 0 0 8px 0; font-size: 1.2rem;">Retrieve the FLAG</h3>
+            <p class="mono" style="opacity: 0.8; margin: 0;">Use the KEY to retrieve the FLAG from <code>/mint/flag?key=YOUR_KEY</code></p>
+          </div>
+        </div>
+      </div>
+
+      
+      <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #1a4d2e; opacity: 0.3; display: flex; justify-content: space-between; font-size: 10px;" class="mono">
+        <div>CTF_ID: MHSC_2024</div>
+        <div class="system-label">MISSION_STATUS: ACTIVE</div>
+      </div>
+      <div style="margin-top: 16px; text-align: center; opacity: 0.2; font-size: 0.7rem;" class="mono">
+        <!-- Code modification interface available at /editor -->
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Globe animation
+    const canvas = document.getElementById('globe-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    let rotation = 0;
+    const numMeridians = 24;
+    const numParallels = 12;
+    
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    function drawGlobe() {
+      // Recalculate dimensions on each frame to handle resizing
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const radius = Math.min(canvas.width, canvas.height) * 0.35;
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      const primaryColor = '#ff0000';
+      const secondaryColor = '#1a4d2e';
+      
+      ctx.strokeStyle = secondaryColor;
+      ctx.lineWidth = 1;
+
+      // Draw meridians (longitude lines)
+      for (let i = 0; i < numMeridians; i++) {
+        const angle = (i / numMeridians) * Math.PI * 2 + rotation;
+        ctx.beginPath();
+        
+        for (let j = 0; j <= 50; j++) {
+          const lat = (j / 50) * Math.PI - Math.PI / 2;
+          const x = centerX + radius * Math.cos(lat) * Math.sin(angle);
+          const y = centerY + radius * Math.sin(lat);
+          const z = radius * Math.cos(lat) * Math.cos(angle);
+          
+          if (z > 0) {
+            ctx.globalAlpha = 0.8;
+          } else {
+            ctx.globalAlpha = 0.15;
+          }
+          
+          if (j === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.stroke();
+      }
+
+      // Draw parallels (latitude lines)
+      for (let i = 0; i <= numParallels; i++) {
+        const lat = (i / numParallels) * Math.PI - Math.PI / 2;
+        const parallelRadius = radius * Math.cos(lat);
+        const yPos = centerY + radius * Math.sin(lat);
+        
+        ctx.beginPath();
+        for (let j = 0; j <= 100; j++) {
+          const angle = (j / 100) * Math.PI * 2 + rotation;
+          const x = centerX + parallelRadius * Math.sin(angle);
+          const y = yPos;
+          const z = parallelRadius * Math.cos(angle);
+          
+          if (z > 0) {
+            ctx.globalAlpha = 0.8;
+          } else {
+            ctx.globalAlpha = 0.15;
+          }
+          
+          if (j === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.stroke();
+      }
+
+      // Draw equator highlight
+      ctx.strokeStyle = primaryColor;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath();
+      for (let j = 0; j <= 100; j++) {
+        const angle = (j / 100) * Math.PI * 2 + rotation;
+        const x = centerX + radius * Math.sin(angle);
+        const y = centerY;
+        const z = radius * Math.cos(angle);
+        
+        if (z > 0) {
+          ctx.globalAlpha = 0.8;
+        } else {
+          ctx.globalAlpha = 0.2;
+        }
+        
+        if (j === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.stroke();
+
+      rotation += 0.003;
+      requestAnimationFrame(drawGlobe);
+    }
+
+    drawGlobe();
+  </script>
+</body>
+</html>

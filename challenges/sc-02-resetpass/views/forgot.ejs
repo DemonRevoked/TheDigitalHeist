@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Forgot Password - Mint Access Badge Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;900&family=Roboto+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css"/>
+</head>
+<body>
+  <div class="backdrop-container" id="backdrop">
+    <canvas id="globe-canvas"></canvas>
+  </div>
+  
+  <div class="content-layer">
+    <div class="container">
+      <div class="scanline"></div>
+      
+      <div class="text-center mb-8">
+        <div class="system-label">PASSWORD RECOVERY PROTOCOL</div>
+      </div>
+      
+      <h2 class="glow-text text-center">Forgot Password</h2>
+      
+      <% if (msg) { %><p class="ok"><%= msg %></p><% } %>
+
+      <form method="post" action="/forgot">
+        <label>Email</label>
+        <input name="email" placeholder="tokyo@mint.local" required />
+        <button class="btn" type="submit">Request reset</button>
+      </form>
+
+      <div class="glass-card" style="padding: 16px; margin-top: 24px;">
+        <p class="muted mono" style="margin: 0; font-size: 0.9rem;">⚠️ Security Requirement: Response must not reveal whether the email exists.</p>
+        <p class="muted mono" style="margin: 8px 0 0 0; font-size: 0.75rem; opacity: 0.5;">// Hint: Check the source code editor at /editor</p>
+      </div>
+      
+      <div style="margin-top: 24px; text-align: center;">
+        <a href="/">← Back to Portal</a>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    const canvas = document.getElementById('globe-canvas');
+    const ctx = canvas.getContext('2d');
+    function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    let rotation = 0;
+    function drawGlobe() {
+      // Recalculate dimensions on each frame to handle resizing
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const radius = Math.min(canvas.width, canvas.height) * 0.35;
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = '#1a4d2e';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 24; i++) {
+        const angle = (i / 24) * Math.PI * 2 + rotation;
+        ctx.beginPath();
+        for (let j = 0; j <= 50; j++) {
+          const lat = (j / 50) * Math.PI - Math.PI / 2;
+          const x = centerX + radius * Math.cos(lat) * Math.sin(angle);
+          const y = centerY + radius * Math.sin(lat);
+          const z = radius * Math.cos(lat) * Math.cos(angle);
+          ctx.globalAlpha = z > 0 ? 0.8 : 0.15;
+          if (j === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      rotation += 0.003;
+      requestAnimationFrame(drawGlobe);
+    }
+    drawGlobe();
+  </script>
+</body>
+</html>

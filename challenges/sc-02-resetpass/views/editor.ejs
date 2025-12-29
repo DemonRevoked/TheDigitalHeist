@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code Editor - Mint Access Badge Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;900&family=Roboto+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css"/>
+  <style>
+    .editor-container {
+      display: flex;
+      flex-direction: column;
+      min-height: calc(100vh - 100px);
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+      position: relative;
+      overflow: visible;
+    }
+    .editor-header {
+      margin-bottom: 20px;
+    }
+    #editorGlassPanel {
+      transition: height 0.4s ease-out;
+      overflow: visible;
+    }
+    .editor-toolbar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .editor-status {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-secure {
+      background: rgba(154, 255, 200, 0.2);
+      border: 2px solid #9affc8;
+      color: #9affc8;
+    }
+    .status-insecure {
+      background: rgba(255, 154, 162, 0.2);
+      border: 2px solid #ff9aa2;
+      color: #ff9aa2;
+    }
+    #codeEditor {
+      width: 100%;
+      flex: 1;
+      min-height: 500px;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 14px;
+      background: rgba(0, 0, 0, 0.4);
+      color: #00ff41;
+      border: 1px solid #1a4d2e;
+      border-radius: 6px;
+      padding: 20px;
+      resize: vertical;
+      tab-size: 2;
+      line-height: 1.6;
+    }
+    #codeEditor:focus {
+      outline: none;
+      border-color: #ff0000;
+      box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+    }
+    .btn {
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: 2px solid;
+      cursor: pointer;
+      font-weight: 600;
+      letter-spacing: 1px;
+      transition: all 0.3s ease;
+      font-family: 'Orbitron', sans-serif;
+    }
+    .btn-primary {
+      background: rgba(255, 0, 0, 0.2);
+      border-color: #ff0000;
+      color: #ff0000;
+    }
+    .btn-primary:hover {
+      background: rgba(255, 0, 0, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 0, 0, 0.4);
+    }
+    .btn-secondary {
+      background: rgba(26, 77, 46, 0.2);
+      border-color: #1a4d2e;
+      color: #1a4d2e;
+    }
+    .btn-secondary:hover {
+      background: rgba(26, 77, 46, 0.3);
+    }
+    .message {
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-top: 12px;
+      font-size: 0.9rem;
+    }
+    .message-success {
+      background: rgba(154, 255, 200, 0.2);
+      border-left: 3px solid #9affc8;
+      color: #9affc8;
+    }
+    .message-error {
+      background: rgba(255, 154, 162, 0.2);
+      border-left: 3px solid #ff9aa2;
+      color: #ff9aa2;
+    }
+    .test-results {
+      margin-top: 20px;
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid #1a4d2e;
+      border-radius: 6px;
+      font-size: 1rem;
+      zoom: 1;
+      transform: scale(1);
+      flex-shrink: 0;
+    }
+    .test-results h3 {
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+    }
+    .test-item {
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(26, 77, 46, 0.3);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+    .test-item:last-child {
+      border-bottom: none;
+    }
+    .test-pass {
+      color: #9affc8;
+    }
+    .test-fail {
+      color: #ff9aa2;
+    }
+    .tooltip {
+      position: relative;
+      display: inline-block;
+    }
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: 200px;
+      max-width: 90vw;
+      background-color: rgba(0, 0, 0, 0.95);
+      color: #00ff41;
+      text-align: left;
+      border-radius: 6px;
+      padding: 10px 14px;
+      position: absolute;
+      z-index: 10000;
+      top: calc(100% + 12px);
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0;
+      transition: opacity 0.2s ease, visibility 0.2s;
+      font-size: 0.8rem;
+      border: 1px solid #1a4d2e;
+      font-family: 'Roboto Mono', monospace;
+      line-height: 1.4;
+      white-space: normal;
+      pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+    }
+    .tooltip .tooltiptext::before {
+      content: "";
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 6px;
+      border-style: solid;
+      border-color: transparent transparent rgba(0, 0, 0, 0.95) transparent;
+      z-index: 10001;
+    }
+    .tooltip:hover .tooltiptext {
+      visibility: visible;
+      opacity: 1;
+    }
+    /* Position tooltips to prevent overlap - use bottom positioning */
+    .editor-toolbar .tooltip:nth-child(1) .tooltiptext {
+      left: 0;
+      transform: translateX(0);
+    }
+    .editor-toolbar .tooltip:nth-child(1) .tooltiptext::before {
+      left: 30px;
+      transform: translateX(0);
+    }
+    .editor-toolbar .tooltip:nth-child(2) .tooltiptext {
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .editor-toolbar .tooltip:nth-child(2) .tooltiptext::before {
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .editor-toolbar .tooltip:nth-child(3) .tooltiptext {
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .editor-toolbar .tooltip:nth-child(3) .tooltiptext::before {
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .editor-toolbar .tooltip:nth-child(4) .tooltiptext {
+      right: 0;
+      left: auto;
+      transform: translateX(0);
+    }
+    .editor-toolbar .tooltip:nth-child(4) .tooltiptext::before {
+      right: 30px;
+      left: auto;
+      transform: translateX(0);
+    }
+    /* Hide all other tooltips when hovering over toolbar to prevent overlap */
+    .editor-toolbar .tooltip .tooltiptext {
+      transition: opacity 0.15s ease, visibility 0.15s;
+    }
+    /* Only show tooltip for the hovered button, hide all others */
+    .editor-toolbar .tooltip:hover .tooltiptext {
+      visibility: visible;
+      opacity: 1;
+      z-index: 10001;
+    }
+    .editor-toolbar .tooltip:not(:hover) .tooltiptext {
+      visibility: hidden;
+      opacity: 0;
+    }
+    .success-celebration {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.95);
+      border: 3px solid #9affc8;
+      border-radius: 12px;
+      padding: 40px;
+      z-index: 10000;
+      text-align: center;
+      box-shadow: 0 0 30px rgba(154, 255, 200, 0.5);
+      animation: celebrate 0.5s ease-out;
+    }
+    @keyframes celebrate {
+      0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+      100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+    .success-celebration h2 {
+      color: #9affc8;
+      margin: 0 0 20px 0;
+      font-size: 2rem;
+    }
+    .success-celebration p {
+      color: #00ff41;
+      margin: 12px 0;
+      font-size: 1.1rem;
+    }
+    .success-celebration .btn {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="backdrop-container" id="backdrop">
+    <canvas id="globe-canvas"></canvas>
+  </div>
+  
+  <div class="content-layer">
+    <div class="editor-container">
+      <div class="scanline"></div>
+      
+      <div class="editor-header">
+        <div class="text-center mb-6">
+          <div class="system-label">CODE EDITOR // SECURE THE RESET FLOW</div>
+        </div>
+        <h1 class="glow-text text-center" style="margin-bottom: 16px;">Edit: src/security/reset.js</h1>
+        <div class="text-center mb-4">
+          <a href="/" class="btn btn-secondary" style="text-decoration: none;">← Back to Portal</a>
+        </div>
+        <div class="text-center mb-4">
+          <div class="editor-status <%= secure ? 'status-secure' : 'status-insecure' %>">
+            <span>●</span>
+            <span>Security Status: <%= secure ? 'SECURE ✅' : 'VULNERABLE ⚠️' %></span>
+          </div>
+        </div>
+        <div class="glass-card" style="padding: 12px; margin-bottom: 16px; background: rgba(0, 0, 0, 0.3);">
+          <p class="mono" style="margin: 0; font-size: 0.85rem; opacity: 0.8;">
+            Fix the security vulnerabilities in the code below. Click <strong style="color: #ff0000;">"💾 Save Changes"</strong> to test.
+          </p>
+        </div>
+      </div>
+
+      <div class="glass-panel" id="editorGlassPanel" style="padding: 24px; min-height: 500px; display: flex; flex-direction: column;">
+        <div class="corner-accent corner-tl"></div>
+        <div class="corner-accent corner-tr"></div>
+        <div class="corner-accent corner-bl"></div>
+        <div class="corner-accent corner-br"></div>
+
+        <div class="editor-toolbar">
+          <div class="tooltip">
+            <button class="btn btn-primary" onclick="saveFile()">💾 Save Changes</button>
+            <span class="tooltiptext">Saves your code and automatically runs security checks. Status will update if fixes are correct.</span>
+          </div>
+          <div class="tooltip">
+            <button class="btn btn-secondary" onclick="loadFile()">🔄 Reload File</button>
+            <span class="tooltiptext">Reloads the file from server. Use if you want to start over or see the original code.</span>
+          </div>
+          <div class="tooltip">
+            <button class="btn btn-secondary" onclick="runTests()">🧪 Run Tests</button>
+            <span class="tooltiptext">Quick validation of your code. Shows which security checks pass or fail.</span>
+          </div>
+          <div class="tooltip">
+            <button class="btn btn-secondary" onclick="checkStatus()">📊 Check Status</button>
+            <span class="tooltiptext">Check current security status. Shows SECURE ✅ when all vulnerabilities are fixed.</span>
+          </div>
+        </div>
+
+        <textarea id="codeEditor" spellcheck="false"><%= fileContent %></textarea>
+
+        <div id="messageArea"></div>
+
+        <div id="testResults" class="test-results" style="display: none;">
+          <h3 style="margin-top: 0; color: #00ff41;">Test Results:</h3>
+          <div id="testContent"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Globe animation (same as other pages)
+    const canvas = document.getElementById('globe-canvas');
+    const ctx = canvas.getContext('2d');
+    function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    let rotation = 0;
+    function drawGlobe() {
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const radius = Math.min(canvas.width, canvas.height) * 0.35;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = '#1a4d2e';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 24; i++) {
+        const angle = (i / 24) * Math.PI * 2 + rotation;
+        ctx.beginPath();
+        for (let j = 0; j <= 50; j++) {
+          const lat = (j / 50) * Math.PI - Math.PI / 2;
+          const x = centerX + radius * Math.cos(lat) * Math.sin(angle);
+          const y = centerY + radius * Math.sin(lat);
+          const z = radius * Math.cos(lat) * Math.cos(angle);
+          ctx.globalAlpha = z > 0 ? 0.8 : 0.15;
+          if (j === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      rotation += 0.003;
+      requestAnimationFrame(drawGlobe);
+    }
+    drawGlobe();
+
+    // Editor functions
+    function showMessage(text, type) {
+      const area = document.getElementById('messageArea');
+      area.innerHTML = `<div class="message message-${type}">${text}</div>`;
+      setTimeout(() => {
+        area.innerHTML = '';
+      }, 5000);
+    }
+
+    async function saveFile() {
+      const content = document.getElementById('codeEditor').value;
+      
+      try {
+        const response = await fetch('/api/file', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ content })
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+          // Only show save confirmation, don't update security status
+          showMessage(`✅ ${data.message}`, 'success');
+          
+          // Don't update status indicator here - wait for Run Tests
+          // Don't reload page - let user run tests first
+        } else {
+          showMessage(`❌ Error: ${data.error}`, 'error');
+        }
+      } catch (error) {
+        showMessage(`❌ Network error: ${error.message}`, 'error');
+      }
+    }
+
+    async function loadFile() {
+      try {
+        const response = await fetch('/api/file');
+        const data = await response.json();
+        
+        if (data.success) {
+          document.getElementById('codeEditor').value = data.content;
+          showMessage('✅ File reloaded', 'success');
+        } else {
+          showMessage(`❌ Error: ${data.error}`, 'error');
+        }
+      } catch (error) {
+        showMessage(`❌ Network error: ${error.message}`, 'error');
+      }
+    }
+
+    function adjustGlassPanelSize() {
+      const glassPanel = document.getElementById('editorGlassPanel');
+      const testResults = document.getElementById('testResults');
+      
+      if (glassPanel && testResults) {
+        // Get current height
+        const currentHeight = glassPanel.offsetHeight;
+        
+        // Temporarily remove height constraint to measure natural height
+        const savedHeight = glassPanel.style.height;
+        glassPanel.style.height = 'auto';
+        
+        // Force reflow
+        void glassPanel.offsetHeight;
+        
+        // Get the natural scroll height (content height)
+        const contentHeight = glassPanel.scrollHeight;
+        const minHeight = 500;
+        const newHeight = Math.max(minHeight, contentHeight);
+        
+        // Set explicit height for smooth transition
+        glassPanel.style.height = currentHeight + 'px';
+        
+        // Trigger transition to new height
+        requestAnimationFrame(() => {
+          glassPanel.style.height = newHeight + 'px';
+        });
+      }
+    }
+
+    async function runTests() {
+      const resultsDiv = document.getElementById('testResults');
+      const contentDiv = document.getElementById('testContent');
+      resultsDiv.style.display = 'block';
+      contentDiv.innerHTML = '<p>Running tests...</p>';
+      
+      // Adjust panel size immediately to show loading state
+      setTimeout(adjustGlassPanelSize, 10);
+
+      try {
+        const response = await fetch('/api/test', {
+          method: 'POST'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          let html = '';
+          for (const [test, passed] of Object.entries(data.tests)) {
+            const testName = test.replace(/([A-Z])/g, ' $1').trim();
+            html += `<div class="test-item ${passed ? 'test-pass' : 'test-fail'}">
+              ${passed ? '✅' : '❌'} ${testName}: ${passed ? 'PASS' : 'FAIL'}
+            </div>`;
+          }
+          html += `<div class="test-item" style="margin-top: 12px; padding-top: 12px; border-top: 2px solid #1a4d2e;">
+            <strong style="color: ${data.allPassed ? '#9affc8' : '#ff9aa2'}">
+              ${data.allPassed ? '✅ All Tests Passed!' : '❌ Some Tests Failed'}
+            </strong>
+          </div>`;
+          contentDiv.innerHTML = html;
+          
+          // Adjust panel size after content is rendered
+          setTimeout(adjustGlassPanelSize, 50);
+          
+          // Update security status indicator ONLY when ALL tests pass
+          if (data.allPassed) {
+            const statusEl = document.querySelector('.editor-status');
+            if (statusEl) {
+              statusEl.className = 'editor-status status-secure';
+              statusEl.innerHTML = '<span>●</span><span>Security Status: SECURE ✅</span>';
+            }
+            // Show success message
+            showMessage('✅ All tests passed! Security status updated to SECURE ✅', 'success');
+            // Show success celebration
+            showSuccessCelebration();
+          } else {
+            // Keep status as VULNERABLE if tests fail
+            const statusEl = document.querySelector('.editor-status');
+            if (statusEl) {
+              statusEl.className = 'editor-status status-insecure';
+              statusEl.innerHTML = '<span>●</span><span>Security Status: VULNERABLE ⚠️</span>';
+            }
+          }
+        } else {
+          contentDiv.innerHTML = `<div class="test-item test-fail">❌ Error: ${data.error}</div>`;
+          setTimeout(adjustGlassPanelSize, 50);
+        }
+      } catch (error) {
+        contentDiv.innerHTML = `<div class="test-item test-fail">❌ Network error: ${error.message}</div>`;
+        setTimeout(adjustGlassPanelSize, 50);
+      }
+    }
+
+    async function checkStatus() {
+      try {
+        const response = await fetch('/api/status');
+        const data = await response.json();
+        
+        showMessage(`Security Status: ${data.secure ? 'SECURE ✅' : 'VULNERABLE ⚠️'} | Last checked: ${new Date(data.timestamp).toLocaleTimeString()}`, data.secure ? 'success' : 'error');
+      } catch (error) {
+        showMessage(`❌ Error: ${error.message}`, 'error');
+      }
+    }
+
+    // Auto-save reminder
+    let unsavedChanges = false;
+    document.getElementById('codeEditor').addEventListener('input', () => {
+      unsavedChanges = true;
+    });
+
+    window.addEventListener('beforeunload', (e) => {
+      if (unsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    });
+
+    // Success celebration function
+    function showSuccessCelebration() {
+      const celebration = document.createElement('div');
+      celebration.className = 'success-celebration';
+      celebration.innerHTML = `
+        <h2>🎉 SUCCESS! 🎉</h2>
+        <p style="font-size: 1.5rem; margin: 20px 0;">Security Status: <strong style="color: #9affc8;">SECURE ✅</strong></p>
+        <p>All vulnerabilities have been fixed!</p>
+        <p style="margin-top: 20px; font-size: 0.9rem; opacity: 0.8;">Next Steps:</p>
+        <p style="font-size: 0.95rem;">1. Get your KEY from <code>/mint/key</code></p>
+        <p style="font-size: 0.95rem;">2. Get the FLAG from <code>/mint/flag?key=YOUR_KEY</code></p>
+        <button class="btn btn-primary" onclick="this.parentElement.remove(); window.location.href='/mint/key';" style="margin-top: 20px;">
+          Get My KEY →
+        </button>
+        <button class="btn btn-secondary" onclick="this.parentElement.remove();" style="margin-top: 10px;">
+          Close
+        </button>
+      `;
+      document.body.appendChild(celebration);
+      
+      // Auto-close after 10 seconds
+      setTimeout(() => {
+        if (celebration.parentElement) {
+          celebration.remove();
+        }
+      }, 10000);
+    }
+  </script>
+</body>
+</html>
+

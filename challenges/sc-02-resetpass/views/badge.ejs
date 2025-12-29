@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>My Badge</title>
+  <link rel="stylesheet" href="/styles.css"/>
+</head>
+<body>
+  <div class="container">
+    <h2>Badge Status</h2>
+    <p><b>User:</b> <%= user.email %></p>
+    <p><b>Mint lockdown status:</b> <%= secure ? "Unlocked (secure reset verified)" : "Locked (reset insecure)" %></p>
+
+    <p class="muted">
+      Once secure:<br/>
+      1. Fetch <code>/mint/key</code><br/>
+      2. Use the key: <code>/mint/flag?key=YOUR_KEY</code>
+    </p>
+    <a class="btn secondary" href="/">Home</a>
+  </div>
+</body>
+</html>

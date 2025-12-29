@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset Password - Mint Access Badge Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;900&family=Roboto+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css"/>
+</head>
+<body>
+  <div class="backdrop-container" id="backdrop">
+    <canvas id="globe-canvas"></canvas>
+  </div>
+  
+  <div class="content-layer">
+    <div class="container">
+      <div class="scanline"></div>
+      
+      <div class="text-center mb-8">
+        <div class="system-label">PASSWORD RESET PROTOCOL</div>
+      </div>
+      
+      <h2 class="glow-text text-center">Reset Password</h2>
+      
+      <% if (error) { %><p class="error"><%= error %></p><% } %>
+      <% if (msg) { %><p class="ok"><%= msg %></p><% } %>
+
+      <form method="post" action="/reset">
+        <label>Reset token</label>
+        <input name="token" placeholder="64-hex token" required />
+        <label>New password</label>
+        <input name="newPassword" type="password" required />
+        <button class="btn" type="submit">Reset</button>
+      </form>
+
+      <div class="glass-card" style="padding: 16px; margin-top: 24px;">
+        <p class="muted mono" style="margin: 0; font-size: 0.9rem;">🔐 Security Requirements:</p>
+        <ul class="mono" style="margin: 8px 0 0 0; padding-left: 20px; opacity: 0.8; font-size: 0.9rem;">
+          <li>Token must be cryptographically random (64 hex chars)</li>
+          <li>Token must expire (15 minutes)</li>
+          <li>Token must be one-time use</li>
+        </ul>
+        <p class="muted mono" style="margin: 8px 0 0 0; font-size: 0.75rem; opacity: 0.5;">// Access the code editor at /editor</p>
+      </div>
+      
+      <div style="margin-top: 24px; text-align: center;">
+        <a href="/">← Back to Portal</a>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    const canvas = document.getElementById('globe-canvas');
+    const ctx = canvas.getContext('2d');
+    function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    let rotation = 0;
+    function drawGlobe() {
+      // Recalculate dimensions on each frame to handle resizing
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const radius = Math.min(canvas.width, canvas.height) * 0.35;
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = '#1a4d2e';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 24; i++) {
+        const angle = (i / 24) * Math.PI * 2 + rotation;
+        ctx.beginPath();
+        for (let j = 0; j <= 50; j++) {
+          const lat = (j / 50) * Math.PI - Math.PI / 2;
+          const x = centerX + radius * Math.cos(lat) * Math.sin(angle);
+          const y = centerY + radius * Math.sin(lat);
+          const z = radius * Math.cos(lat) * Math.cos(angle);
+          ctx.globalAlpha = z > 0 ? 0.8 : 0.15;
+          if (j === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      rotation += 0.003;
+      requestAnimationFrame(drawGlobe);
+    }
+    drawGlobe();
+  </script>
+</body>
+</html>
