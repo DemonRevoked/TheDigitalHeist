@@ -8,10 +8,12 @@ Files:
 - night-walk.jpg
 
 Objective:
-- Recover BOTH values from the file's metadata:
+- Recover BOTH values hidden in the photo metadata/comment blob:
   - KEY:<challenge key>
   - FLAG:TDHCTF{exif_shadow_unit}
 
-Tips:
-- Start with metadata tools (EXIF/XMP/comments).
-- If your tool shows multiple contradictory timestamps, that's intentional.
+Hints (in-story):
+- The Directorate doesn’t just delete evidence — it repackages it.
+- Start where investigators start: metadata, comments, and “harmless” fields.
+- If you find a long wrapped blob, treat it like a standard transport wrapper.
+- Contradictory timestamps are intentional misdirection; focus on what repeats.

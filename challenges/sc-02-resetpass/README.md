@@ -28,18 +28,13 @@ When your implementation is correct, you can fetch the key from:
 
 The server unlocks `/mint/key` only if its **startup self-check** confirms the reset flow is secure.
 
-**Important:** Each student/session gets a **unique KEY**. The key is generated deterministically based on your session ID, so:
-- Each browser session gets a different key
-- The same session will always get the same key (until session expires)
-- You must use your own key to get the flag
-
 ### Part 2: Get the FLAG
 Once you have the KEY, use it to fetch the flag:
 - `GET /mint/flag?key=YOUR_KEY`
 - `POST /mint/flag` with `key=YOUR_KEY` in the body
 
-The flag endpoint validates the key against your session and returns the flag if correct.
-**Note:** Keys are session-specific - you must use the key from your own session.
+The flag endpoint validates the key and returns the flag if correct.
+**Note:** The key is provided by the deployment via environment/secret-file configuration.
 
 ---
 
@@ -77,11 +72,11 @@ npm test
 ## Environment Variables
 
 Default values (set in `.env` or environment):
-- `KEY_SECRET`: Secret used to generate unique keys per session (default: `mint-key-secret`)
-  - Each student gets a unique key based on their session ID
-  - Change this in production for security
+- `KEY`: Challenge KEY required by `/mint/flag` (default: `mint-key-secret`)
+  - Can also be provided via `KEY_FILE` (file contents are used as the key)
+  - Backward compatible: `KEY_SECRET` / `KEY_SECRET_FILE` are also accepted as inputs for the key
 - `FLAG`: The flag returned by `/mint/flag` when provided with correct key
-  - This is the same flag for all students (they use different keys to access it)
+  - This is the same flag for all students
 
 ## What to fix
 Primary file:

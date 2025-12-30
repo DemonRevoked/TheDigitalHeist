@@ -71,7 +71,7 @@ docker compose run --rm sc01-logview npm test
 **Key** (found via path traversal exploit):
 - Location: `data/secrets/vault.key`
 - Access: `GET /download?file=../secrets/vault.key` (before fix)
-- Value: `RDxlT2USNk6yFo1Ejmenl1tkrJ4vGz9T2YKrqOQT`
+- Value: (varies per deployment; sourced from the per-challenge key in the `keys/` folder)
 
 **Flag** (retrieved after fixing the vulnerability):
 - Location: `GET /vault/key` (after fix)

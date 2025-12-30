@@ -15,11 +15,11 @@ Submit **both** values to complete the challenge.
 - **SSH username:** `tokyo`  
 - **SSH password:** `tokyo123`  
 - **SSH host:** `localhost`  
-- **SSH port:** `2222`
+- **SSH port:** `2227`
 
 Example:
 ```bash
-ssh tokyo@localhost -p 2222
+ssh tokyo@localhost -p 2227
 ```
 
 ## Rules of engagement

@@ -15,9 +15,9 @@ function getChallengeKey() {
       console.error('Failed to read challenge key file:', err);
     }
   }
-  const fallbackKey = process.env.CHALLENGE_KEY || "offline-default-web03";
-  console.log(`⚠ Using fallback challenge key: ${fallbackKey}`);
-  return fallbackKey;
+  throw new Error(
+    "Server misconfigured: missing/invalid CHALLENGE_KEY_FILE mount for internal-admin"
+  );
 }
 
 app.get("/", (_req, res) => {

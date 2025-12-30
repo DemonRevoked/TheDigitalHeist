@@ -6,23 +6,28 @@ Writes:
   challenge-files/df-01-night-walk-photo/night-walk.jpg
   challenge-files/df-01-night-walk-photo/README.txt
 
-The JPEG includes a COM (comment) segment containing:
-  KEY:<per-start key>
-  FLAG:TDHCTF{exif_shadow_unit}
-  UNIT:<unit code>
+The JPEG includes a COM (comment) segment with:
+  - Human-readable "field capture" metadata (UNIT/GPS/etc)
+  - A binary blob marker containing an encrypted+compressed payload (KEY/FLAG)
 
-This is intentionally "forensics-medium": EXIF/metadata extraction is the intended path.
+Goal: make extraction *non-trivial* (not solvable by naive strings/xxd),
+while still being solvable with DF tooling + a bit of decoding.
 """
 
 from __future__ import annotations
 
 import base64
+import textwrap
+import gzip
+import io
 import os
 from datetime import datetime, timezone
 
 
 FLAG = "TDHCTF{exif_shadow_unit}"
 UNIT_CODE = "SHADOW-17"
+CAMERA_MODEL = "Kestrel-X3"
+GPS_STR = "51.5033N,0.1195W"
 
 # 1x1 pixel valid JPEG (tiny). We inject a COM segment after SOI.
 _TINY_JPEG_B64 = (
@@ -71,21 +76,42 @@ def main() -> None:
     key = _read_key(repo_root)
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    # "Manipulated EXIF" vibe: include contradictory-looking metadata lines in the comment.
-    # Player will still recover UNIT + KEY + FLAG from metadata extraction tools.
-    comment_text = (
+    # Human-readable part (still discoverable via metadata tools).
+    # IMPORTANT: do not reveal the exact decode chain here; this is player-facing.
+    header_text = (
         "DIRECTORATE FIELD CAPTURE // NIGHT WALK\n"
         f"CapturedUTC:{now}\n"
-        "CameraModel:Kestrel-X3\n"
+        f"CameraModel:{CAMERA_MODEL}\n"
         "DateTimeOriginal:2024:06:19 22:41:03\n"
-        "GPS:51.5033N,0.1195W\n"
+        f"GPS:{GPS_STR}\n"
         f"UNIT:{UNIT_CODE}\n"
-        f"KEY:{key}\n"
-        f"FLAG:{FLAG}\n"
+        "Note: Directorate sanitizer detected. Payload moved to a packed blob.\n"
+        "Note2: The blob is NOT human-readable as-is.\n"
+    ).encode("utf-8")
+
+    # Hidden payload (NOT plaintext in the JPEG anymore)
+    payload = f"KEY:{key}\nFLAG:{FLAG}\n".encode("utf-8")
+    # Use gzip so decoding can be done with standard tools:
+    #   base64 -d | gunzip -c
+    buf = io.BytesIO()
+    with gzip.GzipFile(fileobj=buf, mode="wb", compresslevel=9, mtime=0) as gz:
+        gz.write(payload)
+    packed = buf.getvalue()
+
+    # Medium difficulty: keep it non-plaintext (so strings/xxd won't trivially reveal),
+    # but make decoding straightforward: base64-decode + zlib-decompress.
+    b64 = base64.b64encode(packed).decode("ascii")
+    b64_wrapped = "\n".join(textwrap.wrap(b64, width=76)).encode("utf-8")
+
+    comment = (
+        header_text
+        + b"--BEGIN-BLOB-B64--\n"
+        + b64_wrapped
+        + b"\n--END-BLOB-B64--\n"
     )
 
     template = base64.b64decode(_TINY_JPEG_B64)
-    out_jpeg = _inject_com_segment(template, comment_text.encode("utf-8"))
+    out_jpeg = _inject_com_segment(template, comment)
 
     with open(os.path.join(out_dir, "night-walk.jpg"), "wb") as f:
         f.write(out_jpeg)
@@ -99,12 +125,14 @@ def main() -> None:
             "Files:\n"
             "- night-walk.jpg\n\n"
             "Objective:\n"
-            "- Recover BOTH values from the file's metadata:\n"
+            "- Recover BOTH values hidden in the photo metadata/comment blob:\n"
             "  - KEY:<challenge key>\n"
             "  - FLAG:TDHCTF{exif_shadow_unit}\n\n"
-            "Tips:\n"
-            "- Start with metadata tools (EXIF/XMP/comments).\n"
-            "- If your tool shows multiple contradictory timestamps, that's intentional.\n"
+            "Hints (in-story):\n"
+            "- The Directorate doesn’t just delete evidence — it repackages it.\n"
+            "- Start where investigators start: metadata, comments, and “harmless” fields.\n"
+            "- If you find a long wrapped blob, treat it like a standard transport wrapper.\n"
+            "- Contradictory timestamps are intentional misdirection; focus on what repeats.\n"
         )
 
 

@@ -8,10 +8,10 @@ This guide provides a detailed, step-by-step solution to the CTF challenge. Foll
 
 1. Ensure the Docker container is running:
    ```bash
-   docker compose up --build
+   docker compose up --build exp02-riosradio
    ```
 
-2. Verify SSH access is available on port 2222.
+2. Verify SSH access is available on port 2227.
 
 ---
 
@@ -20,7 +20,7 @@ This guide provides a detailed, step-by-step solution to the CTF challenge. Foll
 **Objective:** Connect to the system as the `tokyo` user.
 
 ```bash
-ssh tokyo@localhost -p 2222
+ssh tokyo@localhost -p 2227
 # Password: tokyo123
 ```
 

@@ -2,7 +2,8 @@
 """
 Author-side verifier for DF-01.
 
-Parses the JPEG COM segment and prints recovered values.
+Parses the JPEG COM segment, locates the embedded blob, decodes it,
+and prints recovered values (KEY/FLAG).
 Pure python, no deps.
 """
 
@@ -10,6 +11,9 @@ from __future__ import annotations
 
 import os
 import sys
+import base64
+import gzip
+import io
 
 
 def extract_com_comments(jpeg: bytes) -> list[bytes]:
@@ -38,6 +42,28 @@ def extract_com_comments(jpeg: bytes) -> list[bytes]:
             comments.append(payload)
     return comments
 
+def extract_payload_from_comment(comment: bytes) -> bytes:
+    marker = b"--BEGIN-BLOB-B64--\n"
+    i = comment.find(marker)
+    if i == -1:
+        raise ValueError("blob marker not found")
+    header = comment[:i]
+    blob = comment[i + len(marker) :]
+
+    end = b"\n--END-BLOB-B64--\n"
+    j = blob.find(end)
+    if j == -1:
+        raise ValueError("blob end marker not found")
+    b64_block = blob[:j]
+
+    # Strip whitespace/newlines and base64-decode
+    b64_compact = b"".join(b64_block.split())
+    packed = base64.b64decode(b64_compact, validate=False)
+
+    # Payload is gzip-compressed
+    with gzip.GzipFile(fileobj=io.BytesIO(packed), mode="rb") as gz:
+        return gz.read()
+
 
 def main() -> int:
     repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
@@ -48,8 +74,15 @@ def main() -> int:
     if not comments:
         print("[!] No COM comment found")
         return 2
-    text = b"\n---\n".join(comments).decode("utf-8", errors="replace")
-    print(text.strip())
+    # Our tiny file uses a single comment; be robust anyway.
+    for c in comments:
+        try:
+            payload = extract_payload_from_comment(c)
+            print(payload.decode("utf-8", errors="replace").strip())
+            return 0
+        except Exception:
+            continue
+    print("[!] Failed to decode payload from COM comment")
     return 0
 
 

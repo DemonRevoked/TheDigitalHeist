@@ -34,7 +34,7 @@ Generated at startup by `entrypoint.sh`:
 
 ## Validation steps (creator)
 ### Container startup
-- SSH exposed on host port `2222`.
+- SSH exposed on host port `2227` (chosen to avoid collision with other SSH challenges in the root compose).
 
 ### Cron active
 - Ensure cron is running. The container starts cron in the entrypoint.

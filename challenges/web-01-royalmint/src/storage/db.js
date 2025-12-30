@@ -6,7 +6,7 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
 
-// Read challenge key from file if provided, otherwise use env var
+// Read challenge key from file (no .env override).
 function getChallengeKey() {
   const keyFile = process.env.CHALLENGE_KEY_FILE;
   if (keyFile && fs.existsSync(keyFile)) {
@@ -19,9 +19,9 @@ function getChallengeKey() {
       console.error('Failed to read challenge key file:', err);
     }
   }
-  const fallbackKey = process.env.CHALLENGE_KEY || "offline-default-web01";
-  console.log(`⚠ Using fallback challenge key: ${fallbackKey}`);
-  return fallbackKey;
+  throw new Error(
+    "Server misconfigured: missing/invalid CHALLENGE_KEY_FILE mount for web-01 database seeding"
+  );
 }
 
 async function initDb() {

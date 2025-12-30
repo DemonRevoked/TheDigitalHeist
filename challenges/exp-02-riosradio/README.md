@@ -15,16 +15,16 @@ Default creds (change in `Dockerfile` if needed):
 - `tokyo / tokyo123`
 
 ### Run
-1. Copy `.env.example` -> `.env` and set values:
-   - `CTF_KEY=...`
-   - `CTF_FLAG=...`
-2. Start:
+1. Set values (environment or repo `.env`):
+   - `EXP02_KEY=...`
+   - `EXP02_FLAG=...`
+2. Start (from repo root):
 ```bash
-docker compose up --build
+docker compose up --build exp02-riosradio
 ```
 3. SSH:
 ```bash
-ssh tokyo@localhost -p 2222
+ssh tokyo@localhost -p 2227
 ```
 
 ### Notes for creators

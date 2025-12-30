@@ -5,6 +5,24 @@ const fs = require("fs");
 
 const { runStartupSelfCheck } = require("./utils/selfCheck");
 
+function getChallengeKey() {
+  // Always read the per-startup key from a mounted secret file.
+  const keyFile = process.env.KEY_FILE || process.env.CHALLENGE_KEY_FILE;
+  if (keyFile) {
+    try {
+      const raw = fs.readFileSync(keyFile, "utf8");
+      const trimmed = (raw || "").toString().trim();
+      if (trimmed) return trimmed;
+    } catch (_err) {
+      // fall through
+    }
+  }
+
+  throw new Error(
+    "Challenge key file missing/unreadable. Set KEY_FILE/CHALLENGE_KEY_FILE and mount the key file."
+  );
+}
+
 const app = express();
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "..", "views"));
@@ -13,6 +31,20 @@ app.use(express.json()); // For JSON body parsing
 app.use(express.text({ type: 'text/plain' })); // For text body parsing
 
 const LOGS_DIR = path.join(__dirname, "..", "data", "logs");
+const SECRETS_DIR = path.join(__dirname, "..", "data", "secrets");
+const VAULT_KEY_PATH = path.join(SECRETS_DIR, "vault.key");
+
+// Ensure the vault key content matches the configured challenge key.
+// This prevents stale/hardcoded keys from leaking when keys are rotated via `startup.sh`.
+try {
+  const k = getChallengeKey();
+  if (k) {
+    fs.mkdirSync(SECRETS_DIR, { recursive: true });
+    fs.writeFileSync(VAULT_KEY_PATH, `${k}\n`, "utf8");
+  }
+} catch (_err) {
+  // Non-fatal; challenge can still run, but key may be stale.
+}
 
 // Dynamic function to get current safeJoinLogsPath (allows hot-reloading)
 function getSafeJoinLogsPath() {

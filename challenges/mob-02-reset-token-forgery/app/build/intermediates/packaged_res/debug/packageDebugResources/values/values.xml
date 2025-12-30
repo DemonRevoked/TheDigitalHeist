@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:ns1="http://schemas.android.com/tools">
+    <color name="ic_launcher_background">#121212</color>
+    <string name="app_name">MOB-02 ResetPass (Offline)</string>
+    <string name="copy">Copy</string>
+    <string name="email_hint">Email</string>
+    <string name="footer">No network required. Token verification is performed locally.</string>
+    <string name="generate_token">Generate reset token</string>
+    <string name="generated_token_label">Generated token</string>
+    <string name="generated_token_placeholder">(generate a token above)</string>
+    <string name="submit">Reset</string>
+    <string name="submit_token_title">Submit token</string>
+    <string name="title">Offline Password Reset</string>
+    <string name="token_hint">Paste reset token (JWT)</string>
+    <style name="Theme.TDH.Mob02" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#1E88E5</item>
+        <item name="colorPrimaryVariant">#1565C0</item>
+        <item name="colorSecondary">#43A047</item>
+        <item name="android:statusBarColor" ns1:targetApi="l">?attr/colorPrimaryVariant</item>
+    </style>
+</resources>

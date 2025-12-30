@@ -5,7 +5,7 @@
 
 set -e
 
-CONTAINER_NAME="exp-02-riosradio_rio-relay-hard_1"
+CONTAINER_NAME="exp02-riosradio"
 TEMP_FILE="/tmp/ctf_test_output"
 
 echo "=========================================="
@@ -17,7 +17,7 @@ echo ""
 echo "[*] Checking if container is running..."
 if ! sudo docker ps | grep -q "$CONTAINER_NAME"; then
     echo "[!] ERROR: Container '$CONTAINER_NAME' is not running!"
-    echo "[!] Please start it with: sudo docker-compose up -d"
+    echo "[!] Please start it from the repo root with: docker compose up -d exp02-riosradio"
     exit 1
 fi
 echo "[+] Container is running"

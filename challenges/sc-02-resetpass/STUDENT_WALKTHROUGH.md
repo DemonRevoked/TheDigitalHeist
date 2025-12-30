@@ -388,12 +388,7 @@ Once your code is fixed and tests pass:
    - In browser: Navigate to `http://YOUR_CTF_URL/mint/key`
    - Or with curl: `curl http://localhost:5102/mint/key`
    
-   You'll receive a unique 64-character hexadecimal key (e.g., `a1b2c3d4e5f6...`).
-   
-   **Important:** Each student/session gets a **different unique key**. The key is generated based on your session ID, so:
-   - Save the cookies to maintain your session
-   - Your key is unique to your browser session
-   - You must use YOUR key to get the flag
+   You'll receive the challenge KEY for this deployment.
 
 ### Part 2: Get the FLAG
 
@@ -435,9 +430,8 @@ Once your code is fixed and tests pass:
 
 ### Issue: "/mint/flag returns Invalid key"
 **Solution:** 
-- Make sure you're using the exact KEY returned by `/mint/key` from YOUR session
-- Ensure you're using the same browser/session cookies when accessing `/mint/flag`
-- Keys are session-specific - you cannot use someone else's key
+- Make sure you're using the exact KEY returned by `/mint/key`
+- Ensure the `KEY` (or `KEY_FILE`) environment variable is set correctly for the deployment
 
 ---
 

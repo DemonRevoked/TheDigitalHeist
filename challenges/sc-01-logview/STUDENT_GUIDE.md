@@ -141,7 +141,7 @@ curl http://localhost:5101/download?file=../secrets/vault.key
 
 **Expected Result:**
 ```
-RDxlT2USNk6yFo1Ejmenl1tkrJ4vGz9T2YKrqOQT
+(your deployment-specific key)
 ```
 
 **Your celebration:**
@@ -191,7 +191,7 @@ path.join('/app/data/logs', '../secrets/vault.key')
 
 **You've successfully:**
 - ✅ Identified the path traversal vulnerability
-- ✅ Exploited it to find the key: `RDxlT2USNk6yFo1Ejmenl1tkrJ4vGz9T2YKrqOQT`
+- ✅ Exploited it to find the key: (your deployment-specific key)
 - ✅ Understood how the vulnerability works
 
 **Now proceed to Stage 2: Fix the Vulnerability**
@@ -366,7 +366,7 @@ TDHCTF{BELLA_CIAO_NO_MORE_DOT_DOT_SLASH}
 > "Yes! I got the flag! The vault is unlocked! 🎉"
 > 
 > **Summary of what you accomplished:**
-> - ✅ **Stage 1**: Found the key by exploiting the vulnerability: `RDxlT2USNk6yFo1Ejmenl1tkrJ4vGz9T2YKrqOQT`
+> - ✅ **Stage 1**: Found the key by exploiting the vulnerability: (your deployment-specific key)
 > - ✅ **Stage 2**: Fixed the vulnerability and retrieved the flag: `TDHCTF{BELLA_CIAO_NO_MORE_DOT_DOT_SLASH}`
 
 ---
@@ -490,7 +490,7 @@ Before considering the challenge complete:
 - [ ] Windows-style traversal (`..\`) is blocked
 - [ ] All tests pass (`npm test`)
 - [ ] Health endpoint shows `"secure": true`
-- [ ] **Stage 1**: Successfully accessed `../secrets/vault.key` and found the key: `RDxlT2USNk6yFo1Ejmenl1tkrJ4vGz9T2YKrqOQT`
+- [ ] **Stage 1**: Successfully accessed `../secrets/vault.key` and found the key: (your deployment-specific key)
 - [ ] **Stage 2**: `/vault/key` returns the flag: `TDHCTF{BELLA_CIAO_NO_MORE_DOT_DOT_SLASH}`
 
 ---
@@ -501,7 +501,7 @@ You've successfully completed the challenge when:
 
 **Stage 1:**
 1. ✅ Successfully exploited path traversal to access `../secrets/vault.key`
-2. ✅ Retrieved the key: `RDxlT2USNk6yFo1Ejmenl1tkrJ4vGz9T2YKrqOQT`
+2. ✅ Retrieved the key: (your deployment-specific key)
 3. ✅ Understood how the vulnerability works
 
 **Stage 2:**

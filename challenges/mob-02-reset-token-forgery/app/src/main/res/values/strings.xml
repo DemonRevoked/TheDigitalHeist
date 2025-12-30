@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">MOB-02 ResetPass (Offline)</string>
+    <string name="title">Offline Password Reset</string>
+    <string name="email_hint">Email</string>
+    <string name="generate_token">Generate reset token</string>
+    <string name="generated_token_label">Generated token</string>
+    <string name="generated_token_placeholder">(generate a token above)</string>
+    <string name="copy">Copy</string>
+    <string name="submit_token_title">Submit token</string>
+    <string name="token_hint">Paste reset token (JWT)</string>
+    <string name="submit">Reset</string>
+    <string name="footer">No network required. Token verification is performed locally.</string>
+</resources>
+
+

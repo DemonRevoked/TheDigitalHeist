@@ -1,0 +1,32 @@
+R_DEF: Internal format may change without notice
+local
+color ic_launcher_background
+drawable ic_launcher_foreground
+id btnCopyToken
+id btnGenerateToken
+id btnSubmitToken
+id divider
+id etEmail
+id etToken
+id tilEmail
+id tilToken
+id tvFooter
+id tvGeneratedLabel
+id tvGeneratedToken
+id tvSubmitTitle
+id tvTitle
+layout activity_main
+mipmap ic_launcher
+mipmap ic_launcher_round
+string app_name
+string copy
+string email_hint
+string footer
+string generate_token
+string generated_token_label
+string generated_token_placeholder
+string submit
+string submit_token_title
+string title
+string token_hint
+style Theme.TDH.Mob02

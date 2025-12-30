@@ -126,6 +126,9 @@ generate_all_keys() {
   mkdir -p "$CHALLENGE_FILES_DIR/df-02-burned-usb"
   mkdir -p "$CHALLENGE_FILES_DIR/net-01-onion-pcap"
   mkdir -p "$CHALLENGE_FILES_DIR/net-02-doh-rhythm"
+  # MOB-02 (APK download) uses slug folder "mob-02" so the landing page can attach files to the existing mob-02 card.
+  rm -rf "$CHALLENGE_FILES_DIR/mob-02-reset-token-forgery" >/dev/null 2>&1 || true
+  mkdir -p "$CHALLENGE_FILES_DIR/mob-02"
   echo "[+] Challenge file directories created"
 
   key1=$(generate_key "Pz1aQw9L" "nE7rVb5C")   # RE-01
@@ -195,6 +198,10 @@ generate_all_keys() {
   else
     echo "[!] python3 not found; skipping NET artifact generation"
   fi
+
+  # MOB-02 APK build is executed via docker-compose service `mob02-apkbuilder`
+  # when containers are started (Task 4). This ensures each startup embeds
+  # the freshly generated key from ./keys/mob-02.key into the APK.
 }
 
 # ============================================
@@ -217,11 +224,24 @@ start_containers() {
   if [ -f "$KEY_DIR/re-02.key" ]; then
     export RE02_KEY="$(cat "$KEY_DIR/re-02.key" | tr -d '\n\r')"
   fi
-  # Expose web challenge keys to docker-compose dynamically (read from files each run)
-  if [ -f "$KEY_DIR/web-02.key" ]; then
-    export WEB02_KEY="$(cat "$KEY_DIR/web-02.key" | tr -d '\n\r')"
+  # NOTE: Web challenges read keys from mounted key files at runtime (CHALLENGE_KEY_FILE).
+  # We intentionally do NOT export key values into the environment here.
+  # Expose exp challenge keys to docker-compose dynamically (read from files each run)
+  if [ -f "$KEY_DIR/exp-01.key" ]; then
+    export EXP01_KEY="$(cat "$KEY_DIR/exp-01.key" | tr -d '\n\r')"
+  fi
+  if [ -f "$KEY_DIR/exp-02.key" ]; then
+    export EXP02_KEY="$(cat "$KEY_DIR/exp-02.key" | tr -d '\n\r')"
   fi
   
+  # Build offline APK artifacts (MOB-02) so they are downloadable from the landing page.
+  # IMPORTANT: must run AFTER keys are written so the per-startup key is embedded into the APK.
+  echo "[*] Building MOB-02 APK artifact (docker compose one-shot)..."
+  if ! $dc -f "$SCRIPT_DIR/docker-compose.yml" --profile artifacts run --rm mob02-apkbuilder; then
+    echo "[!] MOB-02 APK build failed; aborting startup to avoid incomplete deployment."
+    exit 1
+  fi
+
   $dc -f "$SCRIPT_DIR/docker-compose.yml" up --build -d
   echo "[+] Docker containers started!"
 }

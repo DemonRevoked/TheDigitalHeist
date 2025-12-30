@@ -112,9 +112,11 @@ def main() -> None:
             "- Recover BOTH values hidden in the image:\n"
             "  - KEY:<challenge key>\n"
             "  - FLAG:TDHCTF{carved_network_node}\n\n"
-            "Notes:\n"
-            "- The image contains deliberate corruption/gaps.\n"
-            "- Beware of decoys.\n"
+            "Hints (in-story):\n"
+            "- The cleanup unit didn’t wipe the drive clean — it interrupted the truth.\n"
+            "- Look for a “core document” that still has structure, then work outward.\n"
+            "- Expect deliberate gaps and noise inserted to break simple carving.\n"
+            "- The most obvious flag-shaped string is not the real one.\n"
         )
 
 

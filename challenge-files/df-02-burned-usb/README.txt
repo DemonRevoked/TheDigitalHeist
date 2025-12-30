@@ -12,6 +12,8 @@ Objective:
   - KEY:<challenge key>
   - FLAG:TDHCTF{carved_network_node}
 
-Notes:
-- The image contains deliberate corruption/gaps.
-- Beware of decoys.
+Hints (in-story):
+- The cleanup unit didn’t wipe the drive clean — it interrupted the truth.
+- Look for a “core document” that still has structure, then work outward.
+- Expect deliberate gaps and noise inserted to break simple carving.
+- The most obvious flag-shaped string is not the real one.

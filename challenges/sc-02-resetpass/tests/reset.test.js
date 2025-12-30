@@ -1,6 +1,17 @@
 const request = require("supertest");
 const crypto = require("crypto");
 
+// Ensure deterministic key/flag in tests (dotenv in server won't override existing env vars).
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+
+const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "tdh-sc02-"));
+const keyFile = path.join(tmpDir, "sc-02.key");
+fs.writeFileSync(keyFile, "TEST_CHALLENGE_KEY_sc02_resetpass\n", "utf8");
+process.env.KEY_SECRET_FILE = keyFile;
+process.env.FLAG = "FLAG{TEST_FLAG_sc02_resetpass}";
+
 const app = require("../src/server");
 const { RESET_STORE } = require("../src/security/reset");
 
@@ -67,65 +78,24 @@ describe("Mint reset flow — secure coding requirements", () => {
   test("mint key must be fetchable after secure self-check", async () => {
     const k = await request(app).get("/mint/key");
     expect(k.status).toBe(200);
-    expect(k.text.trim().length).toBeGreaterThan(10);
-    // Key should be 64 hex characters (HMAC-SHA256 output)
-    expect(k.text.trim()).toMatch(/^[0-9a-f]{64}$/i);
+    expect(k.text.trim()).toBe("TEST_CHALLENGE_KEY_sc02_resetpass");
   });
 
-  test("mint flag must be fetchable with correct key from same session", async () => {
-    // Create an agent to maintain cookies/session across requests
-    const agent = request.agent(app);
-    
-    // First get the key (this creates/uses a session)
-    const keyResponse = await agent.get("/mint/key");
+  test("mint flag must be fetchable with correct key", async () => {
+    const keyResponse = await request(app).get("/mint/key");
     expect(keyResponse.status).toBe(200);
     const key = keyResponse.text.trim();
-    expect(key.length).toBe(64);
 
-    // Use the key to get the flag (via query parameter) - same session
-    const flagResponse1 = await agent.get(`/mint/flag?key=${key}`);
+    const flagResponse1 = await request(app).get(`/mint/flag?key=${encodeURIComponent(key)}`);
     expect(flagResponse1.status).toBe(200);
-    expect(flagResponse1.text.trim().length).toBeGreaterThan(10);
+    expect(flagResponse1.text.trim()).toBe(process.env.FLAG);
 
-    // Use the key to get the flag (via POST body) - same session
-    const flagResponse2 = await agent.post("/mint/flag").send({ key });
+    const flagResponse2 = await request(app).post("/mint/flag").send({ key });
     expect(flagResponse2.status).toBe(200);
-    expect(flagResponse2.text.trim()).toBe(flagResponse1.text.trim());
+    expect(flagResponse2.text.trim()).toBe(process.env.FLAG);
 
-    // Invalid key should fail (even with same session)
-    const invalidResponse = await agent.get("/mint/flag?key=invalid_key");
+    const invalidResponse = await request(app).get("/mint/flag?key=invalid_key");
     expect(invalidResponse.status).toBe(403);
     expect(invalidResponse.text).toBe("Invalid key");
-  });
-
-  test("mint flag rejects key from different session", async () => {
-    // Create two different agents (different sessions)
-    const agent1 = request.agent(app);
-    const agent2 = request.agent(app);
-    
-    // Get key from session 1
-    const keyResponse1 = await agent1.get("/mint/key");
-    expect(keyResponse1.status).toBe(200);
-    const key1 = keyResponse1.text.trim();
-    
-    // Get key from session 2 (should be different)
-    const keyResponse2 = await agent2.get("/mint/key");
-    expect(keyResponse2.status).toBe(200);
-    const key2 = keyResponse2.text.trim();
-    
-    // Keys should be different (different sessions)
-    expect(key1).not.toBe(key2);
-    
-    // Key from session 1 should not work in session 2
-    const crossSessionResponse = await agent2.get(`/mint/flag?key=${key1}`);
-    expect(crossSessionResponse.status).toBe(403);
-    expect(crossSessionResponse.text).toBe("Invalid key");
-    
-    // Each key should work in its own session
-    const validResponse1 = await agent1.get(`/mint/flag?key=${key1}`);
-    expect(validResponse1.status).toBe(200);
-    
-    const validResponse2 = await agent2.get(`/mint/flag?key=${key2}`);
-    expect(validResponse2.status).toBe(200);
   });
 });

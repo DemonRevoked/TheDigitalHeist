@@ -4,30 +4,48 @@ const session = require("express-session");
 const path = require("path");
 
 const fs = require("fs");
+const crypto = require("crypto");
 const { runStartupSelfCheck } = require("./utils/selfCheck");
 const { forgotPassword, resetPassword } = require("./security/reset");
 const { USERS, getUserByEmail, setPasswordForUser } = require("./storage/users");
-const { getSessionKey, validateSessionKey } = require("./utils/keyGenerator");
 
-function getKeySecret() {
-  // Prefer explicit env var, but support reading from a mounted secret file.
-  if (process.env.KEY_SECRET && process.env.KEY_SECRET.trim()) {
-    return process.env.KEY_SECRET.trim();
+function readTrimmedFile(maybePath) {
+  if (!maybePath) return "";
+  try {
+    const raw = fs.readFileSync(maybePath, "utf8");
+    return (raw || "").toString().trim();
+  } catch {
+    return "";
   }
+}
 
-  const secretFile =
-    process.env.KEY_SECRET_FILE || process.env.CHALLENGE_KEY_FILE;
-  if (secretFile) {
-    try {
-      const raw = fs.readFileSync(secretFile, "utf8");
-      const trimmed = (raw || "").toString().trim();
-      if (trimmed) return trimmed;
-    } catch (_err) {
-      // fall through to default
-    }
-  }
+function getChallengeKey() {
+  // Always read the per-startup key from a mounted secret file.
+  // This avoids accidental `.env` overrides and ensures keys rotate with `startup.sh`.
+  const keyFile =
+    process.env.KEY_FILE ||
+    process.env.CHALLENGE_KEY_FILE ||
+    process.env.KEY_SECRET_FILE;
+  const fromFile = readTrimmedFile(keyFile);
+  if (fromFile) return fromFile;
 
-  return "mint-key-secret";
+  // Hard fail if misconfigured: this challenge is intended to be key-file driven.
+  throw new Error(
+    "Challenge key file missing/unreadable. Set KEY_FILE/CHALLENGE_KEY_FILE/KEY_SECRET_FILE and mount the key file."
+  );
+}
+
+function keyMatches(providedKey, expectedKey) {
+  // Constant-time compare on fixed-size buffers (hashes) to avoid length leaks.
+  const a = crypto
+    .createHash("sha256")
+    .update(String(providedKey || ""), "utf8")
+    .digest();
+  const b = crypto
+    .createHash("sha256")
+    .update(String(expectedKey || ""), "utf8")
+    .digest();
+  return crypto.timingSafeEqual(a, b);
 }
 
 const app = express();
@@ -93,24 +111,14 @@ app.post("/reset", async (req, res) => {
 
 app.get("/mint/key", (req, res) => {
   if (!app.locals.secure) return res.status(403).type("text/plain").send("Mint lockdown");
-  
-  // Get session ID (express-session creates this automatically)
-  // req.sessionID is available even before req.session is created
-  const sessionId = req.sessionID || "default";
-  const secretKey = getKeySecret();
-  const uniqueKey = getSessionKey(sessionId, secretKey);
-  
-  res.type("text/plain").send(uniqueKey);
+  res.type("text/plain").send(getChallengeKey());
 });
 
 app.get("/mint/flag", (req, res) => {
   const providedKey = req.query.key || req.body.key || "";
-  
-  // Get session ID for validation
-  const sessionId = req.sessionID || "default";
-  const secretKey = getKeySecret();
-  
-  if (!validateSessionKey(sessionId, providedKey, secretKey)) {
+  const expectedKey = getChallengeKey();
+
+  if (!keyMatches(providedKey, expectedKey)) {
     return res.status(403).type("text/plain").send("Invalid key");
   }
   
@@ -119,12 +127,9 @@ app.get("/mint/flag", (req, res) => {
 
 app.post("/mint/flag", (req, res) => {
   const providedKey = req.query.key || req.body.key || "";
-  
-  // Get session ID for validation
-  const sessionId = req.sessionID || "default";
-  const secretKey = getKeySecret();
-  
-  if (!validateSessionKey(sessionId, providedKey, secretKey)) {
+  const expectedKey = getChallengeKey();
+
+  if (!keyMatches(providedKey, expectedKey)) {
     return res.status(403).type("text/plain").send("Invalid key");
   }
   

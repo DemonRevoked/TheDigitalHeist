@@ -94,8 +94,8 @@ const challengeStories = {
     "A password reset flow guards a Directorate access badge. It's riddled with insecure reset token handling. Rebuild it properly (random tokens, hash-at-rest, expiry, one-time use) to unlock your session key and retrieve the flag.",
   'exp-01-berlinslocker':
     "Berlin’s locker controller keeps Mint staging logs rotated — and it runs with elevated privileges. One mistake in how it locates a helper program gives you a foothold for privilege escalation. Break in over SSH and extract the KEY and FLAG.",
-  'exp-02':
-    'This is the final vault. A chained exploit grants root access to the Directorate\'s central server. Inside, they uncover: the full A₀ source code, the training dataset, communication logs, and instructions for future mass surveillance rollouts. This is the digital equivalent of breaking into the Bank of Spain\'s gold vault.',
+  'exp-02-riosradio':
+    "Rio’s relay node rotates mint keys automatically. A small misconfiguration becomes a pivot: tokyo → rio → root. Abuse root automation to extract the KEY and the FLAG from the relay system.",
   'ai-01-artemis':
     'The team analyzes chat logs between agents and the A₀ system. Patterns show the AI has been impersonating human field officers, steering decisions. A₀ is not just a tool. It is an autonomous strategist—like a digital Alicia Sierra.',
   'ai-02-cerberus':
@@ -121,7 +121,7 @@ const challengeDifficulties = {
   'sc-01-logview': 'easy',
   'sc-02-resetpass': 'medium',
   'exp-01-berlinslocker': 'medium',
-  'exp-02': 'hard',
+  'exp-02-riosradio': 'hard',
   'ai-01-artemis': 'easy',
   'ai-02-cerberus': 'hard'
 };
@@ -145,7 +145,7 @@ const challengeOrder = [
   'sc-01-logview',
   'sc-02-resetpass',
   'exp-01-berlinslocker',
-  'exp-02',
+  'exp-02-riosradio',
   'ai-01-artemis',
   'ai-02-cerberus'
 ];
@@ -282,6 +282,12 @@ export default class ChallengeStore {
         sshCredentials.password = 'tokyo123';
         sshCredentials.host = this.sshHost; // Will be set in API if not provided
         sshCredentials.port = 2221;
+      } else if (slug === 'exp-02-riosradio') {
+        sshCredentials.username = 'tokyo';
+        sshCredentials.password = 'tokyo123';
+        sshCredentials.host = this.sshHost; // Will be set in API if not provided
+        // NOTE: this is the port we expose in root docker-compose.yml to avoid collision with re-01 (2222)
+        sshCredentials.port = 2227;
       }
       
       // Add platform URLs for challenges that have web interfaces

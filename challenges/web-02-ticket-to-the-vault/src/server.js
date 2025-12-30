@@ -107,18 +107,20 @@ app.get("/admin/tickets", requireLogin, requireAdmin, async (req, res) => {
 app.get("/admin/flag", requireLogin, requireAdmin, (_req, res) => {
   const flag = process.env.FLAG || "FLAG{missing_flag_env}";
 
-  // Challenge key is dynamic per restart; prefer reading it from the mounted file.
-  // Fallback to CHALLENGE_KEY env var if file is unavailable.
-  let challengeKey = process.env.CHALLENGE_KEY || "missing_challenge_key";
+  // Challenge key is dynamic per restart; always read it from the mounted file.
   const keyFile = process.env.CHALLENGE_KEY_FILE;
-  if (keyFile) {
-    try {
-      if (fs.existsSync(keyFile)) {
-        challengeKey = fs.readFileSync(keyFile, "utf8").trim() || challengeKey;
-      }
-    } catch (_) {
-      // keep fallback
-    }
+  if (!keyFile || !fs.existsSync(keyFile)) {
+    return res
+      .status(500)
+      .type("text/plain")
+      .send("Server misconfigured: missing CHALLENGE_KEY_FILE mount");
+  }
+  const challengeKey = fs.readFileSync(keyFile, "utf8").trim();
+  if (!challengeKey) {
+    return res
+      .status(500)
+      .type("text/plain")
+      .send("Server misconfigured: empty challenge key file");
   }
 
   // Return key right next to the flag so bot/XSS exfil captures both.

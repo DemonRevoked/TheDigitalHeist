@@ -38,7 +38,7 @@ fi
 
 # Set defaults if not set
 export PORT=5101
-export SC01_KEY=${SC01_KEY:-RDxlT2USNk6yFo1Ejmenl1tkrJ4vGz9T2YKrqOQT}
+export SC01_KEY=${SC01_KEY:-}
 export SC01_FLAG=${SC01_FLAG:-TDHCTF{BELLA_CIAO_NO_MORE_DOT_DOT_SLASH}}
 
 echo ""

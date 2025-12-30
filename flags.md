@@ -11,5 +11,7 @@ web-03-safehouse = TDHCTF{ssrf_internal_pivot}
 net-01-onion-pcap = TDHCTF{rogue_engineer_signal}
 net-02-doh-rhythm = TDHCTF{dns_tunnel_key}
 ai-01-artemis = TDHCTF{deepfake_identified_lsb_recovered}
-ai-02-cerberus = TDHCTF{cerberus_extracted_<random_hex>} (dynamically generated)
+ai-02-cerberus = TDHCTF{cerberus_extracted} 
+exp-01-berlinslocker = TDHCTF{berlins_locker_compromised}
+exp-02-riosradio = TDHCTF{rios_radio_exploited}
 
