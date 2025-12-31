@@ -13,5 +13,5 @@ net-02-doh-rhythm = TDHCTF{dns_tunnel_key}
 ai-01-artemis = TDHCTF{deepfake_identified_lsb_recovered}
 ai-02-cerberus = TDHCTF{cerberus_extracted} 
 exp-01-berlinslocker = TDHCTF{berlins_locker_compromised}
-exp-02-riosradio = TDHCTF{rios_radio_exploited}
+exp-02-riosradio = TDHCTF{PIVOTED_THEN_ROOTED_BY_CRON}
 

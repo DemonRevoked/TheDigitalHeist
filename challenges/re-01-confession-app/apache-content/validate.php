@@ -31,11 +31,12 @@ $passphrase = $data['passphrase'];
 if ($passphrase === $EXPECTED_PASSPHRASE) {
     // Read key from file (similar to how it was before)
     $key_file = '/var/www/html/key.txt';
-    $key = 'offline-session-key';
-    
-    if (file_exists($key_file)) {
-        $key = trim(file_get_contents($key_file));
+    if (!file_exists($key_file)) {
+        http_response_code(500);
+        echo json_encode(['status' => 'error', 'message' => 'Server misconfigured: missing key file']);
+        exit;
     }
+        $key = trim(file_get_contents($key_file));
     
     // Use flag from environment variable (set by entrypoint)
     $flag = $CHALLENGE_FLAG;

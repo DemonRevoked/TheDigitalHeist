@@ -14,6 +14,7 @@ from __future__ import annotations
 import gzip
 import io
 import os
+import sys
 
 
 GAP_START = b"<<DIRECTORATE_SCRUB_GAP>>\n"
@@ -37,8 +38,11 @@ def remove_gaps(data: bytes) -> bytes:
 
 
 def main() -> None:
-    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-    p = os.path.join(repo_root, "challenge-files", "df-02-burned-usb", "burned-usb.img")
+    if len(sys.argv) > 1:
+        p = os.path.abspath(sys.argv[1])
+    else:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+        p = os.path.join(repo_root, "challenge-files", "df-02-burned-usb", "burned-usb.img")
     with open(p, "rb") as f:
         blob = f.read()
 

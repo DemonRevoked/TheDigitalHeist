@@ -335,7 +335,7 @@ int main(void) {
     const char *ck = getenv("CHALLENGE_KEY");
     if (!ck || !*ck) {
         #ifndef CHALLENGE_KEY_BUILD
-        #define CHALLENGE_KEY_BUILD "offline-session-key"
+        #error "CHALLENGE_KEY_BUILD must be provided at build time (no default challenge key allowed)"
         #endif
         ck = CHALLENGE_KEY_BUILD;
     }

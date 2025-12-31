@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">MOB-01 Insecure Notes (Offline)</string>
+    <string name="title">Insecure Notes</string>
+    <string name="submit_token_title">Unlock note</string>
+    <string name="token_hint">Enter access phrase</string>
+    <string name="submit">Unlock</string>
+    <string name="footer">Offline-only. The “lock” is implemented locally.</string>
+
+    <!-- Part of the access phrase lives in strings.xml -->
+    <string name="mob01_phrase_part_strings">-ACCESS-</string>
+</resources>
+
+

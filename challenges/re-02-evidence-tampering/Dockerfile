@@ -11,8 +11,8 @@ RUN mkdir -p /var/run/sshd
 
 COPY src/ /app/src/
 
-# Build arg for embedding the challenge key at compile time
-ARG CHALLENGE_KEY_BUILD=offline-session-key
+# Build arg for embedding the challenge key at compile time (required)
+ARG CHALLENGE_KEY_BUILD
 
 # Compile with maximum obfuscation: stripped, no debug info, no symbols
 # Makes binary unreadable with basic tools, requires RE tools like Ghidra

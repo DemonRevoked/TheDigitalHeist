@@ -2,160 +2,185 @@
 """
 Author-side verifier for NET-01.
 
-Decodes challenge-files/net-01/capture.pcap and prints recovered flag.
+Decodes challenge-files/net-01-onion-pcap/net-01-onion-pcap.pcap and prints recovered flag.
 Pure python, no deps.
 """
 
 from __future__ import annotations
 
+import base64
 import os
 import struct
+import sys
 from dataclasses import dataclass
 
 
-def _u16(x: int) -> int:
-    return x & 0xFFFF
+@dataclass(frozen=True)
+class Pkt:
+    ts_us: int
+    data: bytes
 
 
-def read_pcap_frames(pcap_path: str) -> list[bytes]:
+def read_pcap_pkts(pcap_path: str) -> list[Pkt]:
     with open(pcap_path, "rb") as f:
         gh = f.read(24)
         if len(gh) != 24:
             raise ValueError("bad pcap")
-        frames = []
+        pkts: list[Pkt] = []
         while True:
             ph = f.read(16)
             if not ph:
                 break
             if len(ph) != 16:
                 raise ValueError("truncated packet header")
-            _ts_sec, _ts_usec, incl, _orig = struct.unpack("<IIII", ph)
+            ts_sec, ts_usec, incl, _orig = struct.unpack("<IIII", ph)
             data = f.read(incl)
             if len(data) != incl:
                 raise ValueError("truncated packet data")
-            frames.append(data)
-        return frames
+            pkts.append(Pkt(ts_us=(ts_sec * 1_000_000 + ts_usec), data=data))
+        return pkts
 
 
-@dataclass
-class Record:
-    idx: int
-    ip_id_low: int
-    ts_low: int
-
-
-def parse_net01_records(frames: list[bytes]) -> list[Record]:
-    records: list[Record] = []
-    for fr in frames:
-        if len(fr) < 14 + 4:
+def parse_dns_query_name(dns_data: bytes, offset: int) -> tuple[str, int]:
+    """Parse DNS QNAME from DNS packet data, starting at offset"""
+    labels = []
+    pos = offset
+    jumped = False
+    max_jumps = 10
+    jump_count = 0
+    
+    while pos < len(dns_data):
+        if jump_count > max_jumps:
+            break
+        length = dns_data[pos]
+        if length == 0:
+            pos += 1
+            break
+        # DNS compression pointer
+        if (length & 0xC0) == 0xC0:
+            if pos + 1 >= len(dns_data):
+                break
+            ptr = ((length & 0x3F) << 8) | dns_data[pos + 1]
+            if not jumped:
+                pos += 2
+            pos = ptr
+            jumped = True
+            jump_count += 1
             continue
-        # Ether + VLAN
+        # Regular label
+        if length > 63 or pos + 1 + length > len(dns_data):
+            break
+        label = dns_data[pos + 1:pos + 1 + length].decode("ascii", errors="ignore")
+        labels.append(label)
+        pos += 1 + length
+        if jumped:
+            break
+    
+    return ".".join(labels), pos
+
+
+def extract_dns_chunks(pkts: list[Pkt]) -> list[str]:
+    """Extract Base64 chunks from DNS query names in the signal flow"""
+    chunks: list[tuple[int, str]] = []
+    signal_client = "10.0.5.42"
+    signal_server = "10.0.5.53"
+    exfil_marker = ".blueprint.professor.royalmint.local"
+    
+    for p in pkts:
+        fr = p.data
+        if len(fr) < 14 + 20 + 8:
+            continue
+        
+        # Ethernet
         ethertype = struct.unpack("!H", fr[12:14])[0]
-        if ethertype != 0x8100:
+        if ethertype != 0x0800:
             continue
-        tci = struct.unpack("!H", fr[14:16])[0]
-        vlan = tci & 0x0FFF
-        if vlan != 133:
-            continue
-        inner_ethertype = struct.unpack("!H", fr[16:18])[0]
-        if inner_ethertype != 0x0800:
-            continue
-        ip = fr[18:]
+        
+        # IPv4
+        ip = fr[14:]
         if len(ip) < 20:
             continue
         ver_ihl = ip[0]
         if (ver_ihl >> 4) != 4:
             continue
         ihl = (ver_ihl & 0x0F) * 4
-        if len(ip) < ihl + 4:
+        if len(ip) < ihl + 8:
             continue
+        
         proto = ip[9]
-        if proto != 47:  # GRE
+        if proto != 17:  # UDP
             continue
-        src4 = ".".join(str(b) for b in ip[12:16])
-        dst4 = ".".join(str(b) for b in ip[16:20])
-        if not (src4 == "198.51.100.10" and dst4 == "203.0.113.20"):
-            continue
-        ip_id = struct.unpack("!H", ip[4:6])[0]
-        ip_id_low = ip_id & 0xFF
-
-        gre = ip[ihl:]
-        if len(gre) < 4:
-            continue
-        gre_proto = struct.unpack("!H", gre[2:4])[0]
-        if gre_proto != 0x86DD:
+        
+        src_ip = ".".join(str(b) for b in ip[12:16])
+        dst_ip = ".".join(str(b) for b in ip[16:20])
+        
+        # Check if this is from the signal client
+        if src_ip != signal_client or dst_ip != signal_server:
             continue
 
-        ip6 = gre[4:]
-        if len(ip6) < 40:
+        # UDP
+        udp = ip[ihl:]
+        if len(udp) < 8:
             continue
-        if (ip6[0] >> 4) != 6:
-            continue
-        src6 = ip6[8:24]
-        dst6 = ip6[24:40]
-        if not (
-            src6 == bytes.fromhex("20010db8133700000000000000000010")
-            and dst6 == bytes.fromhex("20010db8133700000000000000000020")
-        ):
-            continue
-        flow_label = ((ip6[1] & 0x0F) << 16) | (ip6[2] << 8) | ip6[3]
-        idx = flow_label & 0xFFF
-        next_header = ip6[6]
-        if next_header != 6:
-            continue
-        tcp = ip6[40:]
-        if len(tcp) < 20:
-            continue
-        sport, dport = struct.unpack("!HH", tcp[0:4])
-        if not (sport == 41414 and dport == 443):
-            continue
-        data_offset = (tcp[12] >> 4) * 4
-        if len(tcp) < data_offset:
-            continue
-        opts = tcp[20:data_offset]
-        # Find TS option (kind=8,len=10) preceded by NOPs in our generator
-        ts_low = None
-        i = 0
-        while i < len(opts):
-            kind = opts[i]
-            if kind == 0:
-                break
-            if kind == 1:
-                i += 1
-                continue
-            if i + 1 >= len(opts):
-                break
-            ln = opts[i + 1]
-            if ln < 2 or i + ln > len(opts):
-                break
-            if kind == 8 and ln == 10 and i + 10 <= len(opts):
-                tsval = struct.unpack("!I", opts[i + 2 : i + 6])[0]
-                ts_low = tsval & 0xFF
-                break
-            i += ln
-        if ts_low is None:
+        sport, dport = struct.unpack("!HH", udp[0:4])
+        if dport != 53:  # DNS
             continue
 
-        records.append(Record(idx=idx, ip_id_low=ip_id_low, ts_low=ts_low))
-    return records
+        # DNS
+        dns = udp[8:]
+        if len(dns) < 12:
+            continue
+        
+        # DNS header: check if it's a query (QR=0)
+        flags = struct.unpack("!H", dns[2:4])[0]
+        if (flags & 0x8000) != 0:  # Response, not query
+            continue
+
+        # Parse QNAME
+        try:
+            qname, _ = parse_dns_query_name(dns, 12)
+            # Check if it matches our exfiltration pattern
+            if exfil_marker in qname:
+                # Extract the Base64 chunk (first label)
+                chunk = qname.split(".")[0]
+                # Base64 URL-safe uses A-Z, a-z, 0-9, -, _
+                if len(chunk) > 0 and all(c in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_" for c in chunk):
+                    chunks.append((p.ts_us, chunk))
+        except:
+            pass
+    
+    # Capture is shuffled; order by timestamp to reconstruct the exfil stream.
+    chunks.sort(key=lambda t: t[0])
+    return [c for _ts, c in chunks]
 
 
 def main() -> None:
+    if len(sys.argv) > 1:
+        pcap_path = os.path.abspath(sys.argv[1])
+    else:
     repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
     pcap_path = os.path.join(repo_root, "challenge-files", "net-01-onion-pcap", "net-01-onion-pcap.pcap")
-    frames = read_pcap_frames(pcap_path)
-    recs = parse_net01_records(frames)
-    recs.sort(key=lambda r: r.idx)
-
-    # MEDIUM DIFFICULTY: plaintext byte is stored directly in IPv4 Identification low byte.
-    plain = bytes((_u16(r.ip_id_low) & 0xFF) for r in recs)
+    pkts = read_pcap_pkts(pcap_path)
+    chunks = extract_dns_chunks(pkts)
+    
+    # Concatenate and decode Base64 (URL-safe)
+    b64_string = "".join(chunks)
+    if not b64_string:
+        print("ERROR: No DNS chunks found")
+        return
+    
+    # Add padding if needed (Base64 requires length to be multiple of 4)
+    pad = "=" * ((4 - (len(b64_string) % 4)) % 4)
+    try:
+        decoded = base64.urlsafe_b64decode(b64_string + pad).decode("utf-8", errors="replace")
     # Expected format:
     #   KEY:<...>
     #   FLAG:TDHCTF{...}
-    print(plain.decode("utf-8", errors="replace").strip())
+        print(decoded.strip())
+    except Exception as e:
+        print(f"ERROR decoding: {e}")
+        print(f"Base64 string: {b64_string}")
 
 
 if __name__ == "__main__":
     main()
-
-

@@ -131,20 +131,20 @@ QA: Smoke-test solve flow, verify flag checker, confirm difficulty notes.
 
 ## Chapter 4 — System Breach (Network, Secure Coding, Exploitation)
 
-### CHALLENGE 13 — NET-01: Onion PCAP (Header Whispers)
-- Narrative hook: Rogue engineer signals the AI node.
-- Build kit: PCAP with multi-encapsulation + decoy traffic, README describing capture context.
-- Mechanics: Peel tunnels (VLAN → IPv4/GRE → IPv6/TCP) and extract covert bytes from header fields.
-- Player path: Reassemble the true stream order → recover hidden bytes from headers → decode to flag.
+### CHALLENGE 13 — NET-01: Onion PCAP (DNS Tunneling Exfiltration)
+- Narrative hook: Rogue engineer exfiltrates data using DNS tunneling.
+- Build kit: PCAP with DNS queries containing exfiltrated data + decoy traffic, README describing capture context.
+- Mechanics: **Real-world DNS tunneling**: Data encoded in DNS query names (subdomain labels) using Base64 URL-safe encoding. A storyline domain hint appears as `*.blueprint.professor.royalmint.local`.
+- Player path: Identify signal client IP and/or the storyline domain → extract DNS query names → concatenate Base64 chunks → decode to flag.
 - Validation: Full flag string.
 - Flag: `TDHCTF{rogue_engineer_signal}`
 - Difficulty: Medium
 
-### CHALLENGE 14 — NET-02: DoH Rhythm (Metadata Exfil)
-- Narrative hook: DNS tunnels move AI logs.
-- Build kit: PCAP with multiple TLS/443 flows (signal + decoys), README.
-- Mechanics: **Metadata side-channel**: TLS-like record lengths (and timing buckets) encode Base32.
-- Player path: Identify the signal flow → map record sizes to symbols → Base32 decode → extract flag.
+### CHALLENGE 14 — NET-02: DoH Rhythm (HTTP Header Exfiltration)
+- Narrative hook: Rogue agent exfiltrates data using HTTP header exfiltration.
+- Build kit: PCAP with HTTP requests containing exfiltrated data in headers + decoy traffic, README.
+- Mechanics: **Real-world HTTP header exfiltration**: Data encoded in HTTP request headers (User-Agent field) using Base64. Used by malware and APT groups to bypass DLP.
+- Player path: Identify signal client IP → extract HTTP User-Agent headers → concatenate Base64 chunks → decode to flag.
 - Validation: Full flag string.
 - Flag: `TDHCTF{dns_tunnel_key}`
 - Difficulty: Hard

@@ -16,11 +16,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 // Read key from file
 $key_file = '/var/www/html/key.txt';
-$key = 'offline-session-key';
-
-if (file_exists($key_file)) {
-    $key = trim(file_get_contents($key_file));
+if (!file_exists($key_file)) {
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'Server misconfigured: missing key file']);
+    exit;
 }
+    $key = trim(file_get_contents($key_file));
 
 // Use flag from environment variable (set by entrypoint)
 $flag = $CHALLENGE_FLAG;

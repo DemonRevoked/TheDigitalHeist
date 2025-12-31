@@ -20,12 +20,9 @@ else
   export CHALLENGE_KEY="offline-default-crypto02"
 fi
 
-# Generate flag from key
-export CHALLENGE_FLAG="TDHCTF{${CHALLENGE_KEY}}"
-
 echo "[CRYPTO-02-VAULT-BREACH] Starting challenge setup..."
 echo "[*] Using key: ${CHALLENGE_KEY:0:20}..."
-echo "[*] Flag: ${CHALLENGE_FLAG:0:25}...}"
+echo "[*] Flag: TDHCTF{vault_breach_decrypted}"
 
 # Generate challenge files dynamically (encrypted with flag)
 echo "[*] Generating encrypted challenge file..."

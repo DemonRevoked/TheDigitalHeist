@@ -1,4 +1,4 @@
-# net-01-onion-pcap — Walkthrough (Onion PCAP / Header Whispers)
+# net-01-onion-pcap — Walkthrough (DNS Tunneling Exfiltration)
 
 ## Goal
 Recover **both** values from:
@@ -10,86 +10,119 @@ KEY:<challenge key>
 FLAG:TDHCTF{...}
 ```
 
-## What you’re looking for (1 paragraph)
-Most traffic is noise. The *real* packets have this stack:
-`802.1Q (VLAN) → IPv4 → GRE → IPv6 → TCP`
+## What you're looking for (1 paragraph)
+This challenge demonstrates **DNS tunneling**—a real-world exfiltration technique used by malware and attackers. Data is encoded in DNS query names (subdomain labels) using Base64 URL-safe encoding. The rogue engineer's client IP (`10.0.5.42`) sends DNS queries where each query's subdomain contains a Base64 chunk of the exfiltrated data. Extract all DNS queries from the signal client, concatenate the Base64 chunks, and decode to recover the flag.
 
-Each packet hides **one ASCII character** in the **low byte** of the outer IPv4 **Identification** field (`ip.id`).  
-Packets are **out of order**, but the inner IPv6 **Flow Label is the packet index**, so simple sorting works.
+## Real-World Context
+DNS tunneling is commonly used by:
+- **Malware**: Iodine, dnscat2, DNSStager, Cobalt Strike DNS beacons
+- **APT groups**: To bypass network restrictions and exfiltrate data
+- **Red teams**: For command and control (C2) communication
+
+The technique works because DNS is often allowed through firewalls, making it an attractive covert channel.
 
 ## Step-by-step (Wireshark UI only)
 
 ### 1) Open the PCAP
 - **File → Open…** → select `net-01-onion-pcap.pcap` → **Open**
 
-### 2) Reduce noise to “GRE inside VLAN”
+### 2) Filter for DNS traffic
 1. Click the **Display Filter** bar.
 2. Paste:
-   - `vlan && ip.proto == 47`
+   - `dns`
 3. Press **Enter**.
 
-You should now see packets where the middle pane shows:
-`Internet Protocol Version 4 → Generic Routing Encapsulation (GRE) → Internet Protocol Version 6 → TCP`
+You should now see DNS query packets.
 
-### 3) Isolate the ONE inner IPv6/TCP conversation (this is the important part)
-There are decoy GRE packets. You want the single inner stream that repeats.
+### 3) Identify the signal client
+The rogue engineer uses a specific client IP. Look for DNS queries from:
+- `10.0.5.42` (the signal client)
 
-#### Option A (fastest): Conversation Filter
-1. Click any packet that shows inner **IPv6** and **TCP** in the Packet Details pane.
-2. Right‑click that packet in the top packet list.
-3. Choose:
-   - **Conversation Filter → IPv6**
-4. Now add TCP ports too (so it’s one flow, not “all IPv6 between two hosts”):
-   - Click a packet → expand **Transmission Control Protocol**
-   - Right‑click **Source Port** → **Apply as Filter → Selected**
-   - Right‑click **Destination Port** → **Apply as Filter → Selected**
+Apply a filter:
+- `dns && ip.src == 10.0.5.42`
 
-#### Option B (always works): Apply-as-filter from fields
-1. Click a packet.
-2. In Packet Details, expand **Internet Protocol Version 6**:
-   - Right‑click **Source Address** → **Apply as Filter → Selected**
-   - Right‑click **Destination Address** → **Apply as Filter → Selected**
-3. Expand **Transmission Control Protocol**:
-   - Right‑click **Source Port** → **Apply as Filter → Selected**
-   - Right‑click **Destination Port** → **Apply as Filter → Selected**
+Alternatively, you can identify it by:
+- Looking for DNS queries to `*.blueprint.professor.royalmint.local` (the exfiltration pattern + storyline hint)
+- Filter: `dns.qry.name contains "blueprint.professor.royalmint.local"`
 
-After this, your filter bar should look like:
-`vlan && ip.proto == 47 && ipv6.src == ... && ipv6.dst == ... && tcp.srcport == ... && tcp.dstport == ...`
+### 4) Extract DNS query names
+1. Right-click a DNS query packet → **Follow → UDP Stream** (optional, for context)
+2. To extract query names systematically:
+   - **File → Export Packet Dissections → As CSV…**
+   - Make sure `dns.qry.name` column is included
+   - Or manually note the query names from the Packet Details pane
 
-If you did it right, the packet count drops to a **single clean stream**.
+3. In Packet Details, expand **Domain Name System (query)**:
+   - Look for **Name** field (e.g., `xxxxx.blueprint.professor.royalmint.local`)
+   - The Base64 chunk is the first label (before `.blueprint.`)
 
-### 4) Add the columns you need (2 columns)
-Add these as columns (Packet Details → right‑click field → **Apply as Column**):
-- **Flow Label**:
-  - Expand **Internet Protocol Version 6**
-  - Click **Flow Label** → **Apply as Column**
-- **IPv4 Identification**:
-  - Expand **Internet Protocol Version 4**
-  - Click **Identification** → **Apply as Column**
+### 5) Extract and decode Base64 chunks
 
-If the bottom bytes pane isn’t visible:
-- **View → Packet Bytes**
+#### Manual Method
+For each DNS query from the signal client:
+1. Extract the first subdomain label (the Base64 chunk)
+   - Example: `s0vzomfiyy2q.blueprint.professor.royalmint.local` → `s0vzomfiyy2q`
+2. Collect all chunks in order (you may need to sort by timestamp)
+3. Concatenate: `s0vzomfiyy2q` + `abc123def456` + `ghi789jkl012` + ... = `s0vzomfiyy2qabc123def456ghi789jkl012...`
+4. Decode the Base64 string (URL-safe) to get the original message
 
-### 5) Sort into message order
-1. Click the **Flow Label** column header to sort.
-2. Click again if needed so it’s **ascending**.
+#### Python Script Method
 
-### 6) Read the hidden text (character-by-character)
-For each packet from top to bottom (now in order):
-1. Click the packet.
-2. In Packet Details: **Internet Protocol Version 4 → Identification**
-3. In **Packet Bytes**:
-   - Two bytes are highlighted (IPv4 ID is 2 bytes)
-   - Take the **second highlighted byte** (the low byte)
-   - Read its ASCII character from the right-side ASCII view and append it to your output
+```python
+import pyshark
+import base64
 
-Within a short number of packets you’ll see:
+# Open the PCAP
+cap = pyshark.FileCapture('net-01-onion-pcap.pcap', display_filter='dns && ip.src == 10.0.5.42 && dns.qry.name contains "blueprint.professor.royalmint.local"')
+
+chunks = []
+for packet in cap:
+    try:
+        qname = packet.dns.qry_name
+        # Extract the Base64 chunk (first label before .blueprint.)
+        if '.blueprint.professor.royalmint.local' in qname:
+            chunk = qname.split('.')[0]  # Keep case as-is for Base64
+            chunks.append(chunk)
+    except:
+        pass
+
+# Sort by timestamp if needed (packets might be out of order)
+# For this challenge, you can also sort by packet number
+
+# Concatenate and decode (URL-safe Base64)
+b64_string = ''.join(chunks)
+# Add padding if needed
+pad = "=" * ((4 - (len(b64_string) % 4)) % 4)
+decoded = base64.urlsafe_b64decode(b64_string + pad).decode('utf-8')
+print(decoded)
 ```
-KEY:...
+
+#### Wireshark + Manual Decode
+1. Filter: `dns && ip.src == 10.0.5.42 && dns.qry.name contains "blueprint.professor.royalmint.local"`
+2. Export DNS query names to a text file
+3. Extract the first label from each query name
+4. Use an online Base64 decoder or Python:
+   ```python
+   import base64
+   b64_string = "s0vzomfiyy2qabc123..."  # Your concatenated chunks
+   pad = "=" * ((4 - (len(b64_string) % 4)) % 4)
+   decoded = base64.urlsafe_b64decode(b64_string + pad).decode('utf-8')
+   print(decoded)
+   ```
+
+### 6) Verify the output
+You should see:
+```
+KEY:<challenge key>
 FLAG:TDHCTF{...}
 ```
 
 ## Author verifier (optional)
 - `python3 challenges/net-01-onion-pcap/src/verify_decode.py`
 
-
+## Learning Points
+- **DNS tunneling** is a real attack technique used in the wild
+- Attackers encode data in DNS query names to bypass network restrictions
+- Base64 URL-safe encoding is DNS-compatible (uses - and _ instead of + and /)
+- Detection requires analyzing DNS query patterns and identifying anomalous subdomains
+- Real-world tools: Iodine, dnscat2, DNSStager, Cobalt Strike

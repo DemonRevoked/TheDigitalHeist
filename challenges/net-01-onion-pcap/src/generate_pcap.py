@@ -2,12 +2,13 @@
 """
 NET-01 generator (pure python, no deps).
 
-Writes a classic PCAP containing:
-- L2 Ether + 802.1Q VLAN
-- Outer IPv4(proto=47 GRE) -> GRE -> inner IPv6/TCP
-- Covert channel split across outer IPv4.id (low byte) and inner TCP TSval (low byte)
-- Packet index in IPv6 flowlabel low 12 bits (packets are shuffled in the capture)
-- Decoy flows (including a fake flag in payload)
+Real-world DNS tunneling exfiltration technique:
+- Data is encoded in DNS query names (subdomain labels)
+- Base64 URL-safe encoding (DNS-compatible) to make it DNS-safe
+- Multiple DNS queries carry the exfiltrated data
+- Decoy DNS queries mixed in to make detection harder
+
+This technique is used by real malware like Iodine, dnscat2, and DNSStager.
 
 Output:
   challenge-files/net-01-onion-pcap/net-01-onion-pcap.pcap
@@ -16,12 +17,13 @@ Output:
 
 from __future__ import annotations
 
+import base64
 import os
 import random
 import struct
 import time
 from dataclasses import dataclass
-from ipaddress import IPv4Address, IPv6Address
+from ipaddress import IPv4Address
 
 
 def _u16(x: int) -> int:
@@ -50,28 +52,15 @@ def ipv4_bytes(ip: str) -> bytes:
     return int(IPv4Address(ip)).to_bytes(4, "big")
 
 
-def ipv6_bytes(ip: str) -> bytes:
-    return int(IPv6Address(ip)).to_bytes(16, "big")
-
-
-def build_ether_vlan(payload: bytes, src: str, dst: str, vlan: int, ethertype: int) -> bytes:
-    # Ether(dst,src,0x8100) + Dot1Q(tci, ethertype) + payload
-    tci = vlan & 0x0FFF
-    return (
-        mac_bytes(dst)
-        + mac_bytes(src)
-        + struct.pack("!H", 0x8100)
-        + struct.pack("!H", tci)
-        + struct.pack("!H", ethertype)
-        + payload
-    )
+def build_ether(payload: bytes, src: str, dst: str, ethertype: int) -> bytes:
+    return mac_bytes(dst) + mac_bytes(src) + struct.pack("!H", ethertype) + payload
 
 
 def build_ipv4(payload: bytes, src: str, dst: str, proto: int, ident: int, ttl: int = 64) -> bytes:
     ver_ihl = (4 << 4) | 5
     tos = 0
     total_len = 20 + len(payload)
-    flags_frag = 0  # no fragmentation
+    flags_frag = 0
     hdr = struct.pack(
         "!BBHHHBBH4s4s",
         ver_ihl,
@@ -81,7 +70,7 @@ def build_ipv4(payload: bytes, src: str, dst: str, proto: int, ident: int, ttl: 
         flags_frag,
         ttl,
         proto,
-        0,  # checksum placeholder
+        0,
         ipv4_bytes(src),
         ipv4_bytes(dst),
     )
@@ -90,33 +79,13 @@ def build_ipv4(payload: bytes, src: str, dst: str, proto: int, ident: int, ttl: 
     return hdr + payload
 
 
-def build_gre(payload: bytes, proto_type: int = 0x86DD) -> bytes:
-    # GRE header: flags/version=0, protocol type
-    return struct.pack("!HH", 0x0000, proto_type) + payload
+def build_udp(payload: bytes, sport: int, dport: int) -> bytes:
+    length = 8 + len(payload)
+    return struct.pack("!HHHH", sport, dport, length, 0) + payload
 
 
-def build_ipv6(payload: bytes, src: str, dst: str, next_header: int, hop_limit: int, flow_label: int) -> bytes:
-    ver_tc_fl = (6 << 28) | (0 << 20) | (flow_label & 0xFFFFF)
-    payload_len = len(payload)
-    return struct.pack(
-        "!IHBB16s16s",
-        ver_tc_fl,
-        payload_len,
-        next_header,
-        hop_limit,
-        ipv6_bytes(src),
-        ipv6_bytes(dst),
-    ) + payload
-
-
-def tcp_checksum_ipv6(src: str, dst: str, tcp_seg: bytes) -> int:
-    pseudo = (
-        ipv6_bytes(src)
-        + ipv6_bytes(dst)
-        + struct.pack("!I", len(tcp_seg))
-        + b"\x00" * 3
-        + struct.pack("!B", 6)
-    )
+def tcp_checksum_ipv4(src: str, dst: str, tcp_seg: bytes) -> int:
+    pseudo = ipv4_bytes(src) + ipv4_bytes(dst) + struct.pack("!BBH", 0, 6, len(tcp_seg))
     return checksum16(pseudo + tcp_seg)
 
 
@@ -130,28 +99,67 @@ def build_tcp(
     ack: int,
     flags: int,
     window: int,
-    tsval: int | None = None,
-    tsecr: int = 0,
 ) -> bytes:
-    # TCP options: NOP, NOP, TS (10 bytes) => 12 bytes; total header 32 bytes
-    options = b""
-    if tsval is not None:
-        options = b"\x01\x01" + struct.pack("!BBII", 8, 10, _u32(tsval), _u32(tsecr))
-    # Pad to 4-byte multiple
-    if len(options) % 4:
-        options += b"\x00" * (4 - (len(options) % 4))
-    data_offset = (20 + len(options)) // 4
+    data_offset = 5
     off_flags = (data_offset << 12) | (flags & 0x01FF)
     hdr = struct.pack("!HHIIHHHH", sport, dport, _u32(seq), _u32(ack), off_flags, _u16(window), 0, 0)
-    seg = hdr + options + payload
-    csum = tcp_checksum_ipv6(src_ip, dst_ip, seg)
+    seg = hdr + payload
+    csum = tcp_checksum_ipv4(src_ip, dst_ip, seg)
     hdr = hdr[:16] + struct.pack("!H", csum) + hdr[18:]
-    return hdr + options + payload
+    return hdr + payload
+
+
+def build_http_request(method: str, path: str, host: str, user_agent: str) -> bytes:
+    req = f"{method} {path} HTTP/1.1\r\n"
+    req += f"Host: {host}\r\n"
+    req += f"User-Agent: {user_agent}\r\n"
+    req += "Accept: */*\r\n"
+    req += "Connection: keep-alive\r\n"
+    req += "\r\n"
+    return req.encode("utf-8")
+
+
+def dns_encode_label(label: str) -> bytes:
+    """Encode a DNS label (max 63 chars)"""
+    label_bytes = label.encode("ascii")
+    if len(label_bytes) > 63:
+        raise ValueError("DNS label too long")
+    return bytes([len(label_bytes)]) + label_bytes
+
+
+def build_dns_query(qname: str, qtype: int = 1, qclass: int = 1) -> bytes:
+    """
+    Build a DNS query packet.
+    qname: Domain name (e.g., "data.example.com")
+    qtype: Query type (1 = A record)
+    qclass: Query class (1 = IN)
+    """
+    # DNS header
+    transaction_id = random.randrange(1, 65536)
+    flags = 0x0100  # Standard query, recursion desired
+    questions = 1
+    answer_rrs = 0
+    authority_rrs = 0
+    additional_rrs = 0
+    
+    header = struct.pack("!HHHHHH", transaction_id, flags, questions, answer_rrs, authority_rrs, additional_rrs)
+    
+    # Encode QNAME (domain name)
+    qname_bytes = b""
+    for part in qname.split("."):
+        if part:
+            qname_bytes += dns_encode_label(part)
+    qname_bytes += b"\x00"  # Null terminator
+    
+    # QTYPE and QCLASS
+    question = struct.pack("!HH", qtype, qclass)
+    
+    return header + qname_bytes + question
 
 
 PCAP_GLOBAL = struct.pack(
     "<IHHIIII",
-    0xA1B2C3D4,  # magic (little-endian capture)
+    0xA1B2C3D4,
     2,
     4,
     0,
@@ -180,11 +188,10 @@ def main() -> None:
     out_dir = os.path.join(repo_root, "challenge-files", "net-01-onion-pcap")
     os.makedirs(out_dir, exist_ok=True)
 
-    # Flag matches Tasks.md placeholder (so your platform expectations stay coherent)
+    # Flag matches Tasks.md placeholder
     flag = "TDHCTF{rogue_engineer_signal}"
 
-    # Per-deployment challenge key (generated by startup.sh). Players must recover this from the PCAP too.
-    # Priority: env CHALLENGE_KEY > keys/net-01-onion-pcap.key > keys/net-01.key > fallback.
+    # Per-deployment challenge key
     challenge_key = os.environ.get("CHALLENGE_KEY", "").strip()
     if not challenge_key:
         for cand in ("net-01-onion-pcap.key", "net-01.key"):
@@ -194,207 +201,181 @@ def main() -> None:
                     challenge_key = fh.read().strip()
                 break
     if not challenge_key:
-        challenge_key = "offline-session-key"
+        raise RuntimeError("Missing challenge key: set CHALLENGE_KEY or generate keys/*.key via startup.sh")
 
     message = f"KEY:{challenge_key}\nFLAG:{flag}\n".encode("utf-8")
 
-    # Inner flow
-    inner_src6 = "2001:db8:1337::10"
-    inner_dst6 = "2001:db8:1337::20"
-    sport = 41414
-    dport = 443
+    # Encode message in Base64 (URL-safe for DNS compatibility)
+    # URL-safe Base64 uses - and _ instead of + and /, making it DNS-safe
+    b64 = base64.urlsafe_b64encode(message).decode("ascii").rstrip("=")
 
-    # Outer transport (GRE over IPv4, VLAN tagged)
-    outer_src4 = "198.51.100.10"
-    outer_dst4 = "203.0.113.20"
-    vlan = 133
+    # Real-world DNS tunneling: split Base64 into chunks and encode in subdomain labels
+    # Common technique: each chunk becomes a subdomain label
+    # Example: "S0VZOmFiY2Q" -> "s0vzomfiyy2q.data.example.com"
+    CHUNK_SIZE = 10  # 10 Base64 chars per DNS label (Base64 is more efficient than Base32)
+    chunks = [b64[i:i+CHUNK_SIZE] for i in range(0, len(b64), CHUNK_SIZE)]
+    
+    # Storyline-hint domain (players can filter by this).
+    # Keep it "realistic enough" (corp-ish) but themed to the heist storyline.
+    base_domain = "professor.royalmint.local"
+    exfil_suffix = "blueprint"
+    
+    # Network setup
+    client_ip = "10.0.5.42"
+    dns_server_ip = "10.0.5.53"
+    client_port = 54321
+    dns_port = 53
+
+    # Add some HTTP traffic for realism (client does normal web beacons too).
+    http_server_ip = "10.0.5.80"
+    http_host = "cctv.royalmint.local"
+    http_sport = 49152
+    http_dport = 80
+    
     mac_src = "02:42:ac:11:00:02"
     mac_dst = "02:42:ac:11:00:01"
 
     frames: list[Frame] = []
     t0 = int(time.time())
+    now_us = t0 * 1_000_000
 
-    # Add lots of background traffic to make the capture "heavy" and slow down analysis.
-    # This is intentionally noisy but should remain fair: the real covert stream is uniquely
-    # identifiable by VLAN + GRE + inner IPv6 5-tuple.
-    NOISE_PACKETS = 3500
-    DECOY_GRE_PACKETS = 1200
+    # Add background noise (legitimate-looking DNS queries)
+    NOISE_DNS_QUERIES = 2000
+    DECOY_EXFIL_QUERIES = 500
 
-    def add_noise_ipv4_tcp_udp(count: int) -> None:
+    def add_noise_dns(count: int) -> None:
+        nonlocal frames, now_us
+        legitimate_domains = [
+            "www.royalmint.local",
+            "auth.royalmint.local",
+            "cdn.royalmint.local",
+            "cctv.royalmint.local",
+            "vault.royalmint.local",
+            "ops.professor.royalmint.local",
+            "telemetry.professor.royalmint.local",
+            "updates.tokyo.crew.local",
+            "chat.nairobi.crew.local",
+        ]
+        for _ in range(count):
+            domain = random.choice(legitimate_domains)
+            if random.random() < 0.3:
+                # Add random subdomain
+                subdomain = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=random.randint(3, 8)))
+                domain = f"{subdomain}.{domain}"
+            
+            dns_query = build_dns_query(domain)
+            udp = build_udp(dns_query, random.randrange(1024, 65535), dns_port)
+            src_ip = f"10.0.{random.randrange(0, 10)}.{random.randrange(1, 254)}"
+            dst_ip = f"10.0.{random.randrange(0, 10)}.{random.randrange(1, 254)}"
+            ip = build_ipv4(udp, src_ip, dst_ip, proto=17, ident=random.randrange(0, 65536), ttl=random.choice([52, 64, 127]))
+            frame = build_ether(ip, mac_src, mac_dst, 0x0800)
+            frames.append(Frame(ts_us=now_us + random.randrange(0, 3_000_000), data=frame))
+
+    def add_decoy_exfil(count: int) -> None:
+        """Add decoy exfiltration queries that look similar but don't decode correctly"""
+        nonlocal frames, now_us
+        for _ in range(count):
+            # Generate random Base64-like chunks
+            fake_chunk = ''.join(random.choices('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_', k=random.randint(5, 12)))
+            # Decoy uses a *different* suffix so solvers can lock onto the storyline hint suffix.
+            fake_domain = f"{fake_chunk.lower()}.draft.{base_domain}"
+            dns_query = build_dns_query(fake_domain)
+            udp = build_udp(dns_query, random.randrange(1024, 65535), dns_port)
+            # Use different source IPs to make it harder
+            src_ip = f"10.0.{random.randrange(0, 10)}.{random.randrange(1, 254)}"
+            ip = build_ipv4(udp, src_ip, dns_server_ip, proto=17, ident=random.randrange(0, 65536), ttl=64)
+            frame = build_ether(ip, mac_src, mac_dst, 0x0800)
+            frames.append(Frame(ts_us=now_us + random.randrange(0, 3_000_000), data=frame))
+
+    # Add noise first
+    add_noise_dns(NOISE_DNS_QUERIES)
+    add_decoy_exfil(DECOY_EXFIL_QUERIES)
+
+    def emit_http_keepalive(request_times: list[int]) -> None:
+        """
+        Emit a single keep-alive HTTP flow from client_ip -> http_server_ip.
+        We send one request shortly after each DNS exfil query timestamp.
+        """
         nonlocal frames
-        for k in range(count):
-            # Randomize protocol mix: TCP(6) / UDP(17) / ICMP(1)
-            proto = random.choice([6, 6, 6, 17, 17, 1])
-            src4 = f"10.0.{random.randrange(0, 10)}.{random.randrange(1, 254)}"
-            dst4 = f"10.0.{random.randrange(0, 10)}.{random.randrange(1, 254)}"
-            if proto == 1:
-                # Minimal ICMP echo payload (not checksummed at ICMP level; fine for offline PCAP noise)
-                icmp = b"\x08\x00\x00\x00" + os.urandom(random.randrange(8, 64))
-                ip_payload = icmp
-            elif proto == 17:
-                # Minimal UDP header + payload
-                sport_n = random.randrange(1024, 65535)
-                dport_n = random.randrange(1, 65535)
-                payload = os.urandom(random.randrange(10, 220))
-                udp_len = 8 + len(payload)
-                udp = struct.pack("!HHHH", sport_n, dport_n, udp_len, 0) + payload
-                ip_payload = udp
-            else:
-                # Minimal TCP-ish packets: ACK/PSH, random payload. (No strict correctness needed.)
-                sport_n = random.randrange(1024, 65535)
-                dport_n = random.choice([22, 80, 443, 8080, 31337, random.randrange(1, 65535)])
-                payload = os.urandom(random.randrange(0, 300))
-                # Very small TCP header (20 bytes) with checksum omitted (still OK for noise)
-                seq_n = random.randrange(0, 2**32)
-                ack_n = random.randrange(0, 2**32)
-                off_flags = (5 << 12) | random.choice([0x10, 0x18, 0x11])  # ACK / PSH+ACK / FIN+ACK
-                tcp = struct.pack("!HHIIHHHH", sport_n, dport_n, seq_n, ack_n, off_flags, 4096, 0, 0) + payload
-                ip_payload = tcp
+        if not request_times:
+            return
 
-            ip = build_ipv4(
-                ip_payload,
-                src=src4,
-                dst=dst4,
-                proto=proto,
-                ident=random.randrange(0, 65536),
-                ttl=random.choice([45, 52, 59, 64, 127]),
-            )
-            frame = build_ether_vlan(ip, src=mac_src, dst=mac_dst, vlan=vlan, ethertype=0x0800)
-            ts_us = (t0 * 1_000_000) + random.randrange(0, 2_800_000)
-            frames.append(Frame(ts_us=ts_us, data=frame))
+        # Sequence numbers
+        seq_c = 1000 + random.randrange(0, 5000)
+        seq_s = 7000 + random.randrange(0, 5000)
 
-    def add_decoy_gre(count: int) -> None:
-        nonlocal frames
-        for k in range(count):
-            # Decoy GRE using the *same outer tuple* (more annoying), but different inner payload types.
-            # Some are GRE->IPv4, some are GRE->IPv6 with different addresses/ports.
-            if random.random() < 0.55:
-                # GRE carrying IPv4 (proto_type=0x0800)
-                inner_src4 = f"172.16.{random.randrange(0, 16)}.{random.randrange(1, 254)}"
-                inner_dst4 = f"172.16.{random.randrange(0, 16)}.{random.randrange(1, 254)}"
-                payload = os.urandom(random.randrange(20, 160))
-                inner_ip4 = build_ipv4(payload, src=inner_src4, dst=inner_dst4, proto=random.choice([6, 17]), ident=random.randrange(0, 65536), ttl=64)
-                gre = build_gre(inner_ip4, proto_type=0x0800)
-            else:
-                # GRE carrying IPv6 but not the target inner 5-tuple
-                inner_src6_n = f"2001:db8:{random.randrange(1, 65000):x}::{random.randrange(1, 500)}"
-                inner_dst6_n = f"2001:db8:{random.randrange(1, 65000):x}::{random.randrange(1, 500)}"
-                sport_n = random.randrange(1024, 65535)
-                dport_n = random.choice([53, 80, 443, 8443, 31337])
-                payload = os.urandom(random.randrange(0, 220))
-                tcp = build_tcp(
-                    payload=payload,
-                    src_ip=inner_src6_n,
-                    dst_ip=inner_dst6_n,
-                    sport=sport_n,
-                    dport=dport_n,
-                    seq=random.randrange(0, 2**32),
-                    ack=random.randrange(0, 2**32),
-                    flags=0x18,
-                    window=2048,
-                    tsval=(0x22220000 | (k & 0xFF)),
-                    tsecr=0,
-                )
-                inner = build_ipv6(payload=tcp, src=inner_src6_n, dst=inner_dst6_n, next_header=6, hop_limit=64, flow_label=random.randrange(0, 1 << 20))
-                gre = build_gre(inner, proto_type=0x86DD)
+        # Handshake shortly before the first scheduled request
+        t_handshake = max(0, request_times[0] - 25_000)
 
-            outer = build_ipv4(gre, src=outer_src4, dst=outer_dst4, proto=47, ident=random.randrange(0, 65536), ttl=random.choice([58, 61, 64]))
-            frame = build_ether_vlan(outer, src=mac_src, dst=mac_dst, vlan=vlan, ethertype=0x0800)
-            ts_us = (t0 * 1_000_000) + random.randrange(0, 2_800_000)
-            frames.append(Frame(ts_us=ts_us, data=frame))
+        syn = build_tcp(b"", client_ip, http_server_ip, http_sport, http_dport, seq_c, 0, flags=0x02, window=64240)
+        ip = build_ipv4(syn, client_ip, http_server_ip, proto=6, ident=random.randrange(0, 65536), ttl=64)
+        frames.append(Frame(ts_us=t_handshake, data=build_ether(ip, mac_src, mac_dst, 0x0800)))
 
-    # Flood the capture with background packets before adding the real covert stream.
-    add_noise_ipv4_tcp_udp(NOISE_PACKETS)
-    add_decoy_gre(DECOY_GRE_PACKETS)
+        synack = build_tcp(b"", http_server_ip, client_ip, http_dport, http_sport, seq_s, seq_c + 1, flags=0x12, window=64240)
+        ip = build_ipv4(synack, http_server_ip, client_ip, proto=6, ident=random.randrange(0, 65536), ttl=64)
+        frames.append(Frame(ts_us=t_handshake + 5_000, data=build_ether(ip, mac_dst, mac_src, 0x0800)))
 
-    # Build "real" packets (one byte per packet)
-    seq = 100000
-    ack = 200000
-    base_id = 40000
-    base_ts = 0x4A00_0000
+        ack = build_tcp(b"", client_ip, http_server_ip, http_sport, http_dport, seq_c + 1, seq_s + 1, flags=0x10, window=64240)
+        ip = build_ipv4(ack, client_ip, http_server_ip, proto=6, ident=random.randrange(0, 65536), ttl=64)
+        frames.append(Frame(ts_us=t_handshake + 10_000, data=build_ether(ip, mac_src, mac_dst, 0x0800)))
 
-    for i, b in enumerate(message):
-        # MEDIUM DIFFICULTY: no key derivation, no per-index XOR.
-        # Players only need to:
-        #   - reorder by IPv6 flow label low 12 bits
-        #   - read plaintext byte from IPv4 Identification low byte
-        ip_id_low = b
-        # Keep TSval looking "normal" (not part of decode for medium).
-        ts_low = random.randrange(0, 256)
+        seq_c += 1
+        seq_s += 1
 
-        ip_id = (base_id + i) & 0xFFFF
-        ip_id = (ip_id & 0xFF00) | ip_id_low
+        ua = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
+        for k, t_req in enumerate(request_times):
+            # Request after DNS query
+            path = f"/pixel.gif?cam=hall&seq={k}&t={t_req}"
+            req = build_http_request("GET", path, http_host, user_agent=ua)
+            seg = build_tcp(req, client_ip, http_server_ip, http_sport, http_dport, seq_c, seq_s, flags=0x18, window=64240)
+            ip = build_ipv4(seg, client_ip, http_server_ip, proto=6, ident=random.randrange(0, 65536), ttl=64)
+            frames.append(Frame(ts_us=t_req, data=build_ether(ip, mac_src, mac_dst, 0x0800)))
+            seq_c = (seq_c + len(req)) & 0xFFFFFFFF
 
-        tsval = (base_ts + (i * 9973)) & 0xFFFFFFFF
-        tsval = (tsval & 0xFFFFFF00) | ts_low
+            # Tiny server response
+            resp = b"HTTP/1.1 204 No Content\r\nContent-Length: 0\r\n\r\n"
+            seg = build_tcp(resp, http_server_ip, client_ip, http_dport, http_sport, seq_s, seq_c, flags=0x18, window=64240)
+            ip = build_ipv4(seg, http_server_ip, client_ip, proto=6, ident=random.randrange(0, 65536), ttl=64)
+            frames.append(Frame(ts_us=t_req + 5_000, data=build_ether(ip, mac_dst, mac_src, 0x0800)))
+            seq_s = (seq_s + len(resp)) & 0xFFFFFFFF
 
-        # IMPORTANT (medium / Wireshark-UI-only):
-        # Make ordering trivial by sorting directly on the IPv6 Flow Label column.
-        # So Flow Label == packet index.
-        flow_label = i & 0xFFFFF
+    # Real exfiltration: encode data in DNS query names
+    http_request_times: list[int] = []
+    for i, chunk in enumerate(chunks):
+        # Build domain: <chunk>.<exfil_suffix>.<base_domain>
+        # IMPORTANT: Base64 is case-sensitive, so we MUST preserve case in the label.
+        exfil_domain = f"{chunk}.{exfil_suffix}.{base_domain}"
+        
+        dns_query = build_dns_query(exfil_domain)
+        udp = build_udp(dns_query, client_port, dns_port)
+        ip = build_ipv4(udp, client_ip, dns_server_ip, proto=17, ident=1000 + i, ttl=64)
+        frame = build_ether(ip, mac_src, mac_dst, 0x0800)
 
-        # Payload is high-entropy (avoid easy "follow stream" recoveries)
-        payload = os.urandom(random.choice([18, 23, 31, 37]))
-        tcp = build_tcp(
-            payload=payload,
-            src_ip=inner_src6,
-            dst_ip=inner_dst6,
-            sport=sport,
-            dport=dport,
-            seq=seq,
-            ack=ack,
-            flags=0x18,  # PSH, ACK
-            window=4096 + (i % 17),
-            tsval=tsval,
-            tsecr=0,
-        )
-        seq = (seq + len(payload)) & 0xFFFFFFFF
-
-        inner = build_ipv6(
-            payload=tcp,
-            src=inner_src6,
-            dst=inner_dst6,
-            next_header=6,
-            hop_limit=55,
-            flow_label=flow_label,
-        )
-        gre = build_gre(inner, proto_type=0x86DD)
-        outer = build_ipv4(gre, src=outer_src4, dst=outer_dst4, proto=47, ident=ip_id, ttl=61)
-        frame = build_ether_vlan(outer, src=mac_src, dst=mac_dst, vlan=vlan, ethertype=0x0800)
-
-        # Timestamp is in microseconds; we also add jitter so "time sorting" isn't enough.
-        ts_us = (t0 * 1_000_000) + (i * 30_000) + random.randrange(0, 9_000)
+        # Space out queries (realistic timing: 100-500ms between queries)
+        ts_us = (t0 * 1_000_000) + (i * 200_000) + random.randrange(0, 100_000)
         frames.append(Frame(ts_us=ts_us, data=frame))
 
-    # Decoy: a GRE flow with a fake flag in payload (easy trap)
-    decoy_inner_src6 = "2001:db8:dead::10"
-    decoy_inner_dst6 = "2001:db8:dead::20"
-    decoy_seq = 55555
-    fake = b"TDHCTF{this_is_a_decoy_flag_do_not_submit}"
-    for j in range(6):
-        payload = fake[j * 8 : (j + 1) * 8].ljust(8, b".")
-        tcp = build_tcp(
-            payload=payload,
-            src_ip=decoy_inner_src6,
-            dst_ip=decoy_inner_dst6,
-            sport=12345,
-            dport=80,
-            seq=decoy_seq,
-            ack=1,
-            flags=0x18,
-            window=2048,
-            tsval=(0x11111100 | j),
-            tsecr=0,
-        )
-        decoy_seq += len(payload)
-        inner = build_ipv6(tcp, decoy_inner_src6, decoy_inner_dst6, next_header=6, hop_limit=64, flow_label=0xD00D0 | j)
-        gre = build_gre(inner, proto_type=0x86DD)
-        outer = build_ipv4(gre, src="198.51.100.77", dst="203.0.113.88", proto=47, ident=1000 + j, ttl=60)
-        frame = build_ether_vlan(outer, src=mac_src, dst=mac_dst, vlan=999, ethertype=0x0800)
-        ts_us = (t0 * 1_000_000) + 5_000 + (j * 40_000)
+        # After every DNS query, emit a small HTTP beacon a moment later (realistic multi-protocol host).
+        http_request_times.append(ts_us + random.randrange(25_000, 60_000))
+
+    emit_http_keepalive(sorted(http_request_times))
+
+    # Add a decoy flow with fake flag in a different pattern
+    fake_flag = "TDHCTF{this_is_a_decoy_flag_do_not_submit}"
+    fake_b64 = base64.urlsafe_b64encode(fake_flag.encode()).decode("ascii").rstrip("=")
+    fake_chunks = [fake_b64[i:i+CHUNK_SIZE] for i in range(0, len(fake_b64), CHUNK_SIZE)]
+    decoy_client = "10.0.5.99"
+    for j, chunk in enumerate(fake_chunks[:8]):  # Only first 8 chunks
+        # Keep case here too (so the decoy is decodable if someone follows it).
+        exfil_domain = f"{chunk}.backup.{base_domain}"
+        dns_query = build_dns_query(exfil_domain)
+        udp = build_udp(dns_query, 54322, dns_port)
+        ip = build_ipv4(udp, decoy_client, dns_server_ip, proto=17, ident=5000 + j, ttl=64)
+        frame = build_ether(ip, mac_src, mac_dst, 0x0800)
+        ts_us = (t0 * 1_000_000) + 1_000_000 + (j * 150_000)
         frames.append(Frame(ts_us=ts_us, data=frame))
 
-    # Shuffle capture order (solver must reorder by flowlabel index)
+    # Shuffle to make it harder (but players can filter by client IP)
     random.shuffle(frames)
 
     # Write PCAP
@@ -410,9 +391,10 @@ def main() -> None:
     out_readme = os.path.join(out_dir, "README.txt")
     with open(out_readme, "w", encoding="utf-8") as f:
         f.write(
-            "=== NET-01: Onion PCAP — Header Whispers ===\n\n"
-            "You recovered a capture from a Directorate switch span-port.\n"
-            "A rogue engineer is signaling an internal AI node.\n\n"
+            "=== NET-01: Onion PCAP — DNS Tunneling Exfiltration ===\n\n"
+            "You recovered a network capture from the Royal Mint internal network.\n"
+            "A rogue engineer is exfiltrating data using DNS tunneling—a real-world\n"
+            "technique used by malware and attackers to bypass network restrictions.\n\n"
             "Files:\n"
             "- net-01-onion-pcap.pcap\n\n"
             "Objective:\n"
@@ -420,9 +402,11 @@ def main() -> None:
             "  - KEY: <challenge key>\n"
             "  - FLAG: TDHCTF{...}\n\n"
             "Notes:\n"
-            "- The obvious stream contains a decoy.\n"
-            "- The real message is not in payload.\n"
-            "- Order is not capture order.\n"
+            "- The data is encoded in DNS query names (subdomain labels).\n"
+            "- Look for DNS queries matching a themed domain hint.\n"
+            "- The encoding uses Base64 URL-safe encoding (DNS-compatible).\n"
+            "- The same host also generates normal HTTP beacon traffic.\n"
+            "- Not all DNS queries contain the signal—filter carefully.\n"
         )
 
     print(f"[+] Wrote {out_pcap}")
@@ -431,5 +415,3 @@ def main() -> None:
 
 if __name__ == '__main__':
     main()
-
-

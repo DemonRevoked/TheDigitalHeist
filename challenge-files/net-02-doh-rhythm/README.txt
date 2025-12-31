@@ -1,7 +1,8 @@
-=== NET-02: DoH Rhythm — Metadata Exfil ===
+=== NET-02: DoH Rhythm — HTTP Header Exfiltration ===
 
-You captured internal traffic to a 'DoH gateway'. Everything is encrypted.
-The Directorate still leaked the key via metadata.
+You captured internal HTTP traffic. A rogue agent is exfiltrating data
+using HTTP header exfiltration—a real-world technique used by malware
+and APT groups to bypass DLP and network monitoring.
 
 Files:
 - net-02-doh-rhythm.pcap
@@ -12,5 +13,7 @@ Objective:
   - FLAG: TDHCTF{...}
 
 Notes:
-- Decryption is not required and not possible from this capture.
-- Focus on metadata: sizes, timing, patterns.
+- The data is encoded in HTTP request headers.
+- Look for HTTP requests from a specific client IP.
+- The encoding uses Base64 (common in real HTTP exfiltration).
+- Not all HTTP requests contain the signal—filter carefully.

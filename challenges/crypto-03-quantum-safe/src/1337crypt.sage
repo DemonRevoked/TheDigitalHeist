@@ -9,16 +9,13 @@ from random import randint
 import os
 import sys
 
-# Read challenge key and flag from environment
+# Read challenge key from environment (flag is constant)
 if 'CHALLENGE_KEY' in os.environ:
     challenge_key = os.environ['CHALLENGE_KEY']
 else:
     challenge_key = "offline-default-crypto03"
 
-if 'CHALLENGE_FLAG' in os.environ:
-    flag = os.environ['CHALLENGE_FLAG']
-else:
-    flag = "TDHCTF{quantum_safe_decrypted}"
+flag = "TDHCTF{quantum_safe_decrypted}"
 
 # Create message containing both key and flag separately
 # Format: "KEY: <key>\nFLAG: <flag>"
@@ -30,7 +27,11 @@ p, q = getPrime(1337), getPrime(1337)
 n = p*q
 
 print("[+] Computing hint...")
-D = (1*3*3*7)^(1+3+3+7)  # 1337^14
+# IMPORTANT: D must be *huge* so that (hint / D) approximates (sqrt(p) + sqrt(q))
+# with enough absolute precision to recover p+q via rounding:
+#   p+q = s^2 - 2*sqrt(n), where s ≈ sqrt(p)+sqrt(q)
+# With small D this becomes numerically unstable.
+D = 1337^100
 hint = int(D*sqrt(p) + D*sqrt(q))
 
 print("[+] Finding quadratic non-residue...")

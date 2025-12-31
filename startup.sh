@@ -9,12 +9,21 @@ SSH_PASSWORD="CreatorOfUpsideDown2025!"
 SSH_PORT="22"
 
 # ============================================
+# Configuration - Key Encryption (AES-128-CBC)
+# ============================================
+# NOTE: AES-128 requires a 16-byte key and 16-byte IV.
+# These values are 16 ASCII chars each (16 bytes).
+SECRET_KEY="initvector123456"
+IV="passwordpassword"
+
+# ============================================
 # Task 1: Install Dependencies
 # ============================================
 install_dependencies() {
   echo "[*] Updating system packages..."
   sudo apt update -y
-  sudo apt install -y git curl ca-certificates gnupg lsb-release openssh-server
+  # openssl + xxd (vim-common) are required for key encryption
+  sudo apt install -y git curl ca-certificates gnupg lsb-release openssh-server openssl vim-common
 
   echo "[*] Installing Docker..."
   # Add Docker GPG key if not already present
@@ -108,8 +117,26 @@ generate_key() {
   local static2=$2
   local rand1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
   local rand2=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
-  local rand3=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
-  echo "${rand1}${static1}${rand2}${static2}${rand3}"
+  # 32-character key: Static(8) + Random(8) + Random(8) + Static(8)
+  # This is intentionally 32 bytes so AES-128-CBC -nopad can encrypt without padding.
+  echo "${static1}${rand1}${rand2}${static2}"
+}
+
+# Encrypt key using AES-128-CBC with no padding and return hex string (no newlines)
+encrypt_key() {
+  local plaintext="$1"
+
+  # AES-128 expects 16-byte key and 16-byte IV (32 hex chars each).
+  # If SECRET_KEY/IV are longer, OpenSSL ignores the excess; we truncate to avoid warnings.
+  local key_hex
+  local iv_hex
+  key_hex="$(printf "%s" "$SECRET_KEY" | xxd -p | tr -d '\n' | cut -c1-32)"
+  iv_hex="$(printf "%s" "$IV" | xxd -p | tr -d '\n' | cut -c1-32)"
+
+  printf "%s" "$plaintext" | openssl enc -aes-128-cbc \
+    -K "$key_hex" \
+    -iv "$iv_hex" \
+    -nopad | xxd -p | tr -d '\n'
 }
 
 generate_all_keys() {
@@ -126,31 +153,87 @@ generate_all_keys() {
   mkdir -p "$CHALLENGE_FILES_DIR/df-02-burned-usb"
   mkdir -p "$CHALLENGE_FILES_DIR/net-01-onion-pcap"
   mkdir -p "$CHALLENGE_FILES_DIR/net-02-doh-rhythm"
+  # MOB-01 (APK download) uses slug folder "mob-01" so the landing page can attach files to the existing mob-01 card.
+  mkdir -p "$CHALLENGE_FILES_DIR/mob-01"
   # MOB-02 (APK download) uses slug folder "mob-02" so the landing page can attach files to the existing mob-02 card.
   rm -rf "$CHALLENGE_FILES_DIR/mob-02-reset-token-forgery" >/dev/null 2>&1 || true
   mkdir -p "$CHALLENGE_FILES_DIR/mob-02"
   echo "[+] Challenge file directories created"
 
-  key1=$(generate_key "Pz1aQw9L" "nE7rVb5C")   # RE-01
-  key2=$(generate_key "Dx4kHt2M" "yL6uFp8S")   # RE-02
-  key3=$(generate_key "Jc7mRz3T" "qN5vGd1X")   # MOB-01
-  key4=$(generate_key "Sb2pLk6W" "tH9eCx4U")   # MOB-02
-  key5=$(generate_key "Ve8nYs1Q" "mR3jAa7D")   # DF-01
-  key6=$(generate_key "Lf5tPg9B" "zK2cWx8N")   # DF-02
-  key7=$(generate_key "Qr4vJm2Z" "pS6bHd5F")   # WEB-01
-  key8=$(generate_key "Mx9eUc4A" "gT1nVy7P")   # WEB-02
-  key9=$(generate_key "Ha3sDl5R" "wQ8kBn2C")   # WEB-03
-  key10=$(generate_key "Nk6yFo1E" "rJ4vGz9T")  # CRYPTO-01
-  key11=$(generate_key "Cp8tMe2H" "uL5qRx7V")  # CRYPTO-02
-  key12=$(generate_key "Zs7dWc3B" "yF9nPa6M")  # CRYPTO-03
-  key13=$(generate_key "Tb1vKx8Q" "oD4mJg5L")  # NET-01 (Onion PCAP)
-  key14=$(generate_key "Ry2hLp9S" "cN6tVf3A")  # NET-02 (DoH Rhythm)
-  key15=$(generate_key "Uw5qGd7X" "iB2lZc8R")  # SC-01
-  key16=$(generate_key "Gj3nSa6Y" "tE9pQk4M")  # SC-02
-  key17=$(generate_key "Pa4mHv1Z" "sC8xLn5J")  # EXP-01
-  key18=$(generate_key "Xe6bJr2U" "hV7dMf9P")  # EXP-02
-  key19=$(generate_key "Ko9tQw4D" "lS1pRg3N")  # AI-01
-  key20=$(generate_key "Lr2yNc5F" "dA7mVh8K")  # AI-02
+  # Generate plaintext keys (32 chars) first so we can keep a backup before encrypting.
+  pkey1=$(generate_key "Pz1aQw9L" "nE7rVb5C")    # RE-01
+  pkey2=$(generate_key "Dx4kHt2M" "yL6uFp8S")    # RE-02
+  pkey3=$(generate_key "Jc7mRz3T" "qN5vGd1X")    # MOB-01
+  pkey4=$(generate_key "Sb2pLk6W" "tH9eCx4U")    # MOB-02
+  pkey5=$(generate_key "Ve8nYs1Q" "mR3jAa7D")    # DF-01
+  pkey6=$(generate_key "Lf5tPg9B" "zK2cWx8N")    # DF-02
+  pkey7=$(generate_key "Qr4vJm2Z" "pS6bHd5F")    # WEB-01
+  pkey8=$(generate_key "Mx9eUc4A" "gT1nVy7P")    # WEB-02
+  pkey9=$(generate_key "Ha3sDl5R" "wQ8kBn2C")    # WEB-03
+  pkey10=$(generate_key "Nk6yFo1E" "rJ4vGz9T")   # CRYPTO-01
+  pkey11=$(generate_key "Cp8tMe2H" "uL5qRx7V")   # CRYPTO-02
+  pkey12=$(generate_key "Zs7dWc3B" "yF9nPa6M")   # CRYPTO-03
+  pkey13=$(generate_key "Tb1vKx8Q" "oD4mJg5L")   # NET-01 (Onion PCAP)
+  pkey14=$(generate_key "Ry2hLp9S" "cN6tVf3A")   # NET-02 (DoH Rhythm)
+  pkey15=$(generate_key "Uw5qGd7X" "iB2lZc8R")   # SC-01
+  pkey16=$(generate_key "Gj3nSa6Y" "tE9pQk4M")   # SC-02
+  pkey17=$(generate_key "Pa4mHv1Z" "sC8xLn5J")   # EXP-01
+  pkey18=$(generate_key "Xe6bJr2U" "hV7dMf9P")   # EXP-02
+  pkey19=$(generate_key "Ko9tQw4D" "lS1pRg3N")   # AI-01
+  pkey20=$(generate_key "Lr2yNc5F" "dA7mVh8K")   # AI-02
+
+  # Encrypt keys (hex) for use by the containers.
+  key1=$(encrypt_key "$pkey1")
+  key2=$(encrypt_key "$pkey2")
+  key3=$(encrypt_key "$pkey3")
+  key4=$(encrypt_key "$pkey4")
+  key5=$(encrypt_key "$pkey5")
+  key6=$(encrypt_key "$pkey6")
+  key7=$(encrypt_key "$pkey7")
+  key8=$(encrypt_key "$pkey8")
+  key9=$(encrypt_key "$pkey9")
+  key10=$(encrypt_key "$pkey10")
+  key11=$(encrypt_key "$pkey11")
+  key12=$(encrypt_key "$pkey12")
+  key13=$(encrypt_key "$pkey13")
+  key14=$(encrypt_key "$pkey14")
+  key15=$(encrypt_key "$pkey15")
+  key16=$(encrypt_key "$pkey16")
+  key17=$(encrypt_key "$pkey17")
+  key18=$(encrypt_key "$pkey18")
+  key19=$(encrypt_key "$pkey19")
+  key20=$(encrypt_key "$pkey20")
+
+  # Backup / comparison file for development: plaintext + encrypted side-by-side.
+  # Format: TSV with header columns: CHALLENGE, PLAINTEXT, ENCRYPTED_HEX
+  # Lock it down to the current user by default.
+  (
+    umask 077
+    cat > "$KEY_DIR/keys.txt" << EOF
+CHALLENGE       PLAINTEXT       ENCRYPTED_HEX
+RE-01   $pkey1  $key1
+RE-02   $pkey2  $key2
+MOB-01  $pkey3  $key3
+MOB-02  $pkey4  $key4
+DF-01   $pkey5  $key5
+DF-02   $pkey6  $key6
+WEB-01  $pkey7  $key7
+WEB-02  $pkey8  $key8
+WEB-03  $pkey9  $key9
+CRYPTO-01       $pkey10 $key10
+CRYPTO-02       $pkey11 $key11
+CRYPTO-03       $pkey12 $key12
+NET-01  $pkey13 $key13
+NET-02  $pkey14 $key14
+SC-01   $pkey15 $key15
+SC-02   $pkey16 $key16
+EXP-01  $pkey17 $key17
+EXP-02  $pkey18 $key18
+AI-01   $pkey19 $key19
+AI-02   $pkey20 $key20
+EOF
+  )
+  chmod 600 "$KEY_DIR/keys.txt" 2>/dev/null || true
 
   # Write keys to well-known paths for container mounts
   echo "$key1"  > "$KEY_DIR/re-01.key"
@@ -180,7 +263,29 @@ generate_all_keys() {
   echo "$key19" > "$KEY_DIR/ai-01.key"
   echo "$key20" > "$KEY_DIR/ai-02.key"
 
-  echo "[+] 20 keys generated and saved under $KEY_DIR/*.key"
+  echo "[+] Key comparison table (plaintext + encrypted) saved to: $KEY_DIR/keys.txt"
+  echo "[+] 20 keys generated, encrypted (AES-128-CBC), and saved under $KEY_DIR/*.key"
+
+  # Write a repo-root .env so docker-compose.yml variable interpolation works even when
+  # running `sudo docker compose ...` later (sudo typically does not preserve exported vars).
+  # This prevents failures like:
+  #   required variable EXP01_KEY is missing a value
+  ENV_FILE="$SCRIPT_DIR/.env"
+  (
+    umask 077
+    cat > "$ENV_FILE" << EOF
+# Auto-generated by startup.sh on $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+# Used by docker-compose.yml for interpolation (including docker compose down).
+RE01_KEY=$(tr -d '\n\r' < "$KEY_DIR/re-01.key")
+RE02_KEY=$(tr -d '\n\r' < "$KEY_DIR/re-02.key")
+EXP01_KEY=$(tr -d '\n\r' < "$KEY_DIR/exp-01.key")
+EXP02_KEY=$(tr -d '\n\r' < "$KEY_DIR/exp-02.key")
+# Optional flags (can be overridden by editing this file)
+EXP01_FLAG=${EXP01_FLAG:-TDHCTF{berlins_locker_compromised}}
+EXP02_FLAG=${EXP02_FLAG:-TDHCTF{PIVOTED_THEN_ROOTED_BY_CRON}}
+EOF
+  )
+  echo "[+] Wrote docker compose env file: $ENV_FILE"
 
   # Generate offline network challenge artifacts (PCAPs) so they are downloadable from the landing page.
   # IMPORTANT: this must run AFTER keys are written so KEY:<...> is embedded into the PCAP each startup.
@@ -233,12 +338,21 @@ start_containers() {
   if [ -f "$KEY_DIR/exp-02.key" ]; then
     export EXP02_KEY="$(cat "$KEY_DIR/exp-02.key" | tr -d '\n\r')"
   fi
+  # Expose exp challenge flags (allow override via environment).
+  export EXP01_FLAG="${EXP01_FLAG:-TDHCTF{berlins_locker_compromised}}"
+  export EXP02_FLAG="${EXP02_FLAG:-TDHCTF{PIVOTED_THEN_ROOTED_BY_CRON}}"
   
   # Build offline APK artifacts (MOB-02) so they are downloadable from the landing page.
   # IMPORTANT: must run AFTER keys are written so the per-startup key is embedded into the APK.
   echo "[*] Building MOB-02 APK artifact (docker compose one-shot)..."
   if ! $dc -f "$SCRIPT_DIR/docker-compose.yml" --profile artifacts run --rm mob02-apkbuilder; then
     echo "[!] MOB-02 APK build failed; aborting startup to avoid incomplete deployment."
+    exit 1
+  fi
+
+  echo "[*] Building MOB-01 APK artifact (docker compose one-shot)..."
+  if ! $dc -f "$SCRIPT_DIR/docker-compose.yml" --profile artifacts run --rm mob01-apkbuilder; then
+    echo "[!] MOB-01 APK build failed; aborting startup to avoid incomplete deployment."
     exit 1
   fi
 

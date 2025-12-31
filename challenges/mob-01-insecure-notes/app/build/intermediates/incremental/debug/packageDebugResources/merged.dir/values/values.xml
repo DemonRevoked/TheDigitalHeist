@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:ns1="http://schemas.android.com/tools">
+    <color name="ic_launcher_background">#121212</color>
+    <string name="app_name">MOB-01 Insecure Notes (Offline)</string>
+    <string name="footer">Offline-only. The “lock” is implemented locally.</string>
+    <string name="mob01_phrase_part_strings">-ACCESS-</string>
+    <string name="submit">Unlock</string>
+    <string name="submit_token_title">Unlock note</string>
+    <string name="title">Insecure Notes</string>
+    <string name="token_hint">Enter access phrase</string>
+    <style name="Theme.TDH.Mob01" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#1E88E5</item>
+        <item name="colorPrimaryVariant">#1565C0</item>
+        <item name="colorSecondary">#43A047</item>
+        <item name="android:statusBarColor" ns1:targetApi="l">?attr/colorPrimaryVariant</item>
+    </style>
+</resources>

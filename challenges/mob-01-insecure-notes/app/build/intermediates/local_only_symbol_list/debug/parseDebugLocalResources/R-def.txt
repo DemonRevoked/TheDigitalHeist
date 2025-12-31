@@ -1,0 +1,21 @@
+R_DEF: Internal format may change without notice
+local
+color ic_launcher_background
+drawable ic_launcher_foreground
+id btnSubmitToken
+id etToken
+id tilToken
+id tvFooter
+id tvSubmitTitle
+id tvTitle
+layout activity_main
+mipmap ic_launcher
+mipmap ic_launcher_round
+string app_name
+string footer
+string mob01_phrase_part_strings
+string submit
+string submit_token_title
+string title
+string token_hint
+style Theme.TDH.Mob01

@@ -5,7 +5,7 @@ This challenge is intentionally vulnerable because the app performs **client-sid
 ## What to customize
 
 - **JWT secret (KEY)**: assembled in `SecretProvider`.
-- **FLAG**: stored encrypted in `FlagVault` as a base64 blob.
+- **FLAG**: stored as plaintext in `FlagVault` (jadx-visible; allowed to hardcode flags).
 
 ## Changing the KEY (JWT secret)
 
@@ -15,32 +15,13 @@ This challenge is intentionally vulnerable because the app performs **client-sid
 
 ## Changing the FLAG
 
-The flag is not stored as plaintext. It is stored as an **AES-GCM encrypted blob**.
-
-To generate a new blob:
-
-```bash
-python3 tools/generate_flag_blob.py \
-  --secret 'YOUR_NEW_JWT_SECRET_STRING' \
-  --flag 'TDHCTF{your_new_flag_here}'
-```
-
-Copy the printed base64 blob into `FlagVault.FLAG_BLOB_B64`.
+Edit `FlagVault.FLAG` directly.
 
 ### Current defaults (as shipped)
 
 - JWT signing secret string (exact): `TDH_MOB03_RESET_TOKEN_SIGNING_KEY_2025`
 - Flag plaintext: `TDHCTF{offline_reset_token_forgery}`
 - Challenge key: injected at build time from `./keys/mob-02.key` into `BuildConfig.MOB02_CHALLENGE_KEY`
-
-### Dependency note
-
-`tools/generate_flag_blob.py` uses Python package `cryptography`.
-If it is missing in your environment, install it with:
-
-```bash
-python3 -m pip install cryptography
-```
 
 ## Build
 

@@ -1,0 +1,10 @@
+[
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.tdhctf.mob01.app-mergeDebugResources-30:/layout/activity_main.xml",
+        "source": "/root/.gradle/daemon/8.9/com.tdhctf.mob01.app-main-33:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.tdhctf.mob01.app-mergeDebugResources-30:/layout/activity_main.xml",
+        "source": "com.tdhctf.mob01.app-main-33:/layout/activity_main.xml"
+    }
+]

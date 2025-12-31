@@ -1,4 +1,4 @@
-# net-02-doh-rhythm — Walkthrough (DoH Rhythm / Metadata Exfil)
+# net-02-doh-rhythm — Walkthrough (HTTP Header Exfiltration)
 
 ## Goal
 Recover **both** values from `challenge-files/net-02-doh-rhythm/net-02-doh-rhythm.pcap`:
@@ -6,163 +6,144 @@ Recover **both** values from `challenge-files/net-02-doh-rhythm/net-02-doh-rhyth
 - `FLAG: TDHCTF{...}`
 
 ## Key insight
-You **cannot** (and do not need to) decrypt anything. The flag leaks through **metadata**:
-- pick the correct TCP/443 flow (one of several decoys)
-- read the TLS-like **record lengths**
-- map lengths → Base32 alphabet → decode to text
+You **cannot** (and do not need to) decrypt anything. The flag leaks through **HTTP headers**:
+- Identify the signal HTTP flow (specific client IP)
+- Extract Base64-encoded chunks from HTTP request headers (User-Agent field)
+- Concatenate chunks → Base64 decode → recover flag
+
+## Real-World Context
+HTTP header exfiltration is commonly used by:
+- **Malware**: To exfiltrate data through HTTP requests that look like normal web traffic
+- **APT groups**: To bypass Data Loss Prevention (DLP) systems
+- **Red teams**: For covert data exfiltration during penetration tests
+
+The technique works because:
+- HTTP headers are often not deeply inspected by security tools
+- User-Agent and custom headers can contain arbitrary data
+- Traffic looks like normal web browsing to casual inspection
 
 ## Solve outline
-### 0) Find the method hint inside the PCAP (operator note)
-1. Apply a filter:
-   - `tcp.port == 80`
-2. Right‑click a packet → **Follow → TCP Stream**
-3. In the plaintext stream you should see this exact hint:
-   - `lengths->base32, v=(L-480)/7 | A-Z2-7.`
 
-This tells you the decode rule and the Base32 alphabet.
+### 0) Find the method hint (optional)
+The challenge name "DoH Rhythm" is a red herring—this is actually HTTP header exfiltration, not DNS-over-HTTPS.
 
-### 1) Find the signal TLS/443 flow
+### 1) Find the signal HTTP flow
 1. Open `net-02-doh-rhythm.pcap` in Wireshark.
-2. Apply a broad filter:
-   - `tcp.port == 443`
-3. Click through a few flows and look for the one where the client→server payload repeatedly starts with TLS record bytes:
-   - `17 03 03` (Application Data, TLS 1.2 record layer)
-4. Once you’ve identified that 4‑tuple (client IP:port → server IP:443), lock it in with a filter like:
-   - `ip.addr == <client_ip> && ip.addr == <server_ip> && tcp.port == 443`
+2. Apply a filter:
+   - `http && ip.src == 10.13.37.10`
+3. Alternatively, look for HTTP requests to `metrics.internal.corp`:
+   - `http.host contains "metrics.internal.corp"`
 
-### 2) Make Wireshark decode the record layer (Wireshark 4.x)
-Because there is no full TLS handshake, Wireshark may not automatically apply the TLS dissector.
-1. Right‑click one of the packets in the signal flow → **Decode As…**
-2. Select **Transport: TCP** and set **Current** (or both directions) to **TLS**
-3. Apply.
+### 2) Extract HTTP headers
+1. Right-click an HTTP request packet → **Follow → HTTP Stream**
+2. Look at the HTTP request headers, specifically the **User-Agent** field
+3. You should see patterns like:
+   - `User-Agent: Mozilla/5.0 (compatible; ExfilChunk-<base64_chunk>)`
 
-Now you should be able to add the TLS length field as a column:
-- Expand **TLS** → **TLS Record Layer** → and right‑click **Length** → **Apply as Column**
-  - Field name in recent Wireshark builds is typically: `tls.record.length`
+### 3) Extract Base64 chunks from User-Agent headers
 
-### 3) Extract the lengths you need
-1. Keep only **client → server** packets (the direction that carries the channel).
-2. Export the displayed packet list:
-   - **File → Export Packet Dissections → As CSV…**
-3. Ensure your CSV contains:
-   - `tls.record.length` (or the Length column you added)
+#### Manual Method (Wireshark UI)
+1. Filter: `http && ip.src == 10.13.37.10 && http.user_agent contains "ExfilChunk-"`
+2. For each HTTP request:
+   - Expand **Hypertext Transfer Protocol**
+   - Find **User-Agent** field
+   - Extract the Base64 chunk after `ExfilChunk-`
+   - Example: `ExfilChunk-S0VZOmFiY2RlZmdoaWprbG1ub3Bx` → `S0VZOmFiY2RlZmdoaWprbG1ub3Bx`
 
-### 4) Decode (KEY + FLAG)
+#### Export Method
+1. Filter: `http && ip.src == 10.13.37.10 && http.user_agent contains "ExfilChunk-"`
+2. **File → Export Packet Dissections → As CSV…**
+3. Ensure `http.user_agent` column is included
+4. Extract chunks from the CSV
 
-#### CSV Formula Method (Excel/Google Sheets)
-
-After exporting the CSV from Wireshark, assume:
-- Column A contains the packet number/row
-- Column B contains `tls.record.length` (or the column name where TLS record lengths are stored)
-
-**Step 1: Filter valid lengths**
-Add a new column (e.g., Column C) to check if the length fits the encoding:
-```excel
-=IF(AND(B2>=480, MOD(B2-480, 7)=0, (B2-480)/7>=0, (B2-480)/7<32), "VALID", "")
-```
-
-**Step 2: Calculate Base32 index**
-Add Column D to calculate the Base32 value index:
-```excel
-=IF(C2="VALID", (B2-480)/7, "")
-```
-
-**Step 3: Map to Base32 character**
-Add Column E to convert index to Base32 character:
-```excel
-=IF(D2<>"", MID("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567", D2+1, 1), "")
-```
-
-**Step 4: Concatenate Base32 string**
-In a separate cell (e.g., F1), concatenate all valid Base32 characters:
-```excel
-=TEXTJOIN("", TRUE, E:E)
-```
-
-**Step 5: Decode Base32 to text**
-In another cell (e.g., G1), decode the Base32 string. For Google Sheets:
-```excel
-=FROM_BASE32(F1)
-```
-
-For Excel (requires manual Base32 decode or use online tool):
-- Copy the Base32 string from F1
-- Use an online Base32 decoder or Python: `base64.b32decode(string + "=" * padding)`
-
-**Alternative: Single Formula Approach (Google Sheets)**
-
-If you want to do it all in one go, assuming Column B has the lengths:
-
-```excel
-=TEXTJOIN("", TRUE, ARRAYFORMULA(IF((B:B>=480)*(MOD(B:B-480, 7)=0)*((B:B-480)/7>=0)*((B:B-480)/7<32), MID("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567", (B:B-480)/7+1, 1), "")))
-```
-
-Note: Using `*` instead of `AND()` in ARRAYFORMULA because `AND()` doesn't work element-wise in arrays.
-
-Then decode with:
-```excel
-=FROM_BASE32(<result_cell>)
-```
-
-**Python Script Method**
-
-Save your CSV export and use this Python script:
+#### Python Script Method
 
 ```python
-import csv
+import pyshark
 import base64
+import re
 
-BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+# Open the PCAP
+cap = pyshark.FileCapture('net-02-doh-rhythm.pcap', display_filter='http && ip.src == 10.13.37.10')
 
-# Read CSV - adjust column name/index as needed
-lengths = []
-with open('exported_packets.csv', 'r') as f:
-    reader = csv.DictReader(f)
-    for row in reader:
-        # Try different possible column names
-        length = None
-        for col in ['tls.record.length', 'Length', 'TLS Record Length']:
-            if col in row and row[col]:
-                try:
-                    length = int(row[col])
-                    break
-                except:
-                    pass
-        if length:
-            lengths.append(length)
+chunks = []
+for packet in cap:
+    try:
+        user_agent = packet.http.user_agent
+        # Extract Base64 chunk from User-Agent
+        match = re.search(r'ExfilChunk-([A-Za-z0-9_-]+)', user_agent)
+        if match:
+            chunk = match.group(1)
+            chunks.append(chunk)
+    except:
+        pass
 
-# Filter and decode
-symbols = []
-for L in lengths:
-    if L >= 480 and (L - 480) % 7 == 0:
-        v = (L - 480) // 7
-        if 0 <= v < 32:
-            symbols.append(BASE32_ALPHABET[v])
-
-# Decode Base32
-b32_string = ''.join(symbols)
+# Concatenate and decode
+b64_string = ''.join(chunks)
 # Add padding if needed
-pad = "=" * ((8 - (len(b32_string) % 8)) % 8)
-decoded = base64.b32decode(b32_string + pad).decode('utf-8')
+pad = "=" * ((4 - (len(b64_string) % 4)) % 4)
+decoded = base64.urlsafe_b64decode(b64_string + pad).decode('utf-8')
 print(decoded)
 ```
 
-**Manual Method**
-For each extracted TLS record length \(L\):
-1. Keep only values that fit the encoding:
-   - \(L = 480 + 7v\) where \(v \in [0, 31]\)
-   - Check: \(L \geq 480\) and \((L - 480) \bmod 7 = 0\)
-2. Convert \(v\) to a Base32 symbol using:
-   - \(v = (L - 480) / 7\)
-   - Map to: `ABCDEFGHIJKLMNOPQRSTUVWXYZ234567` (index 0-31)
-3. Base32‑decode the resulting string to plaintext.
+#### Wireshark + Manual Decode
+1. Filter: `http && ip.src == 10.13.37.10 && http.user_agent contains "ExfilChunk-"`
+2. Export HTTP User-Agent headers to a text file
+3. Extract Base64 chunks using regex: `ExfilChunk-([A-Za-z0-9_-]+)`
+4. Concatenate all chunks
+5. Decode Base64 (URL-safe):
+   ```python
+   import base64
+   b64_string = "S0VZOmFiY2RlZmdoaWprbG1ub3Bx..."  # Your concatenated chunks
+   pad = "=" * ((4 - (len(b64_string) % 4)) % 4)
+   decoded = base64.urlsafe_b64decode(b64_string + pad).decode('utf-8')
+   print(decoded)
+   ```
+
+### 4) Decode Base64 to recover flag
+
+After extracting all Base64 chunks and concatenating them:
+
+```python
+import base64
+
+# Your concatenated Base64 string
+b64_string = "S0VZOmFiY2RlZmdoaWprbG1ub3Bx..."
+
+# Add padding if needed (Base64 requires length to be multiple of 4)
+pad = "=" * ((4 - (len(b64_string) % 4)) % 4)
+
+# Decode (using URL-safe Base64 as used in HTTP headers)
+decoded = base64.urlsafe_b64decode(b64_string + pad).decode('utf-8')
+print(decoded)
+```
 
 You should see:
-- `KEY: ...`
+- `KEY: <challenge key>`
 - `FLAG: TDHCTF{...}`
+
+## Alternative: Using tshark command line
+
+```bash
+# Extract User-Agent headers
+tshark -r net-02-doh-rhythm.pcap \
+  -Y 'http.request && ip.src == 10.13.37.10 && http.user_agent contains "ExfilChunk-"' \
+  -T fields -e http.user_agent | \
+  grep -oP 'ExfilChunk-\K[A-Za-z0-9_-]+' | \
+  tr -d '\n' > chunks.txt
+
+# Decode (Python one-liner)
+python3 -c "import base64; s=open('chunks.txt').read().strip(); pad='='*((4-len(s)%4)%4); print(base64.urlsafe_b64decode(s+pad).decode())"
+```
 
 ## Author verifier
 You can validate locally using:
 - `python3 challenges/net-02-doh-rhythm/src/verify_decode.py`
 
-
+## Learning Points
+- **HTTP header exfiltration** is a real attack technique used in the wild
+- Attackers encode data in HTTP headers (User-Agent, Referer, custom headers) to bypass DLP
+- Base64 encoding is commonly used because it's header-safe
+- Detection requires analyzing HTTP header patterns and identifying anomalous values
+- Real-world examples: APT28, APT29, various banking trojans use this technique
+- Security controls: DLP systems should inspect HTTP headers, not just payloads

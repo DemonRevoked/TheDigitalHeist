@@ -36,7 +36,7 @@ def _read_key(repo_root: str) -> str:
             with open(p, "r", encoding="utf-8", errors="ignore") as fh:
                 return fh.read().strip()
 
-    return "offline-session-key"
+    raise RuntimeError("Missing challenge key: set CHALLENGE_KEY or generate keys/*.key via startup.sh")
 
 
 def main() -> None:

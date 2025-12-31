@@ -2,7 +2,7 @@
 """
 Author-side verifier for NET-02.
 
-Decodes the metadata side-channel from challenge-files/net-02/capture.pcap and prints recovered flag.
+Decodes HTTP header exfiltration from challenge-files/net-02-doh-rhythm/net-02-doh-rhythm.pcap and prints recovered flag.
 Pure python, no deps.
 """
 
@@ -12,13 +12,12 @@ import base64
 import os
 import re
 import struct
+import sys
 from dataclasses import dataclass
 
 
 PCAP_GH_LEN = 24
 PCAP_PH_LEN = 16
-
-BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
 
 
 @dataclass
@@ -48,7 +47,7 @@ def read_pcap(pcap_path: str) -> list[Pkt]:
 
 
 def parse_ipv4_tcp(pkt: bytes):
-    # Ether + IPv4 + TCP (no VLAN in net-02 generator)
+    # Ether + IPv4 + TCP
     if len(pkt) < 14 + 20:
         return None
     ethertype = struct.unpack("!H", pkt[12:14])[0]
@@ -75,60 +74,78 @@ def parse_ipv4_tcp(pkt: bytes):
     return src, dst, sport, dport, flags, payload
 
 
+def extract_http_user_agent(payload: bytes) -> str | None:
+    """Extract User-Agent header from HTTP request"""
+    try:
+        text = payload.decode("utf-8", errors="ignore")
+        # Look for User-Agent header
+        match = re.search(r'User-Agent:\s*([^\r\n]+)', text, re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+    except:
+        pass
+    return None
+
+
 def main() -> None:
-    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-    pcap_path = os.path.join(repo_root, "challenge-files", "net-02-doh-rhythm", "net-02-doh-rhythm.pcap")
+    if len(sys.argv) > 1:
+        pcap_path = os.path.abspath(sys.argv[1])
+    else:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+        pcap_path = os.path.join(repo_root, "challenge-files", "net-02-doh-rhythm", "net-02-doh-rhythm.pcap")
     pkts = read_pcap(pcap_path)
 
     # Signal flow tuple
-    c_ip, s_ip, c_port, s_port = "10.13.37.10", "10.13.37.53", 51022, 443
+    c_ip, s_ip, c_port, s_port = "10.13.37.10", "10.13.37.80", 51022, 80
 
-    # Extract client->server TLS appdata records and their record lengths
-    recs: list[tuple[int, int]] = []  # (ts_us, record_len)
+    # Extract Base64 chunks from User-Agent headers
+    chunks: list[str] = []
     for p in pkts:
         parsed = parse_ipv4_tcp(p.data)
         if not parsed:
             continue
-        src, dst, sport, dport, _flags, payload = parsed
+        src, dst, sport, dport, flags, payload = parsed
+        # Only client->server packets (PSH+ACK or just data)
         if not (src == c_ip and dst == s_ip and sport == c_port and dport == s_port):
             continue
-        # TLS record header is 5 bytes
-        if len(payload) < 5:
+        if len(payload) < 10:  # Minimum HTTP request size
             continue
-        content_type = payload[0]
-        if content_type != 0x17:
+        
+        # Extract User-Agent header
+        ua = extract_http_user_agent(payload)
+        if not ua:
             continue
-        rec_len = struct.unpack("!H", payload[3:5])[0]
-        recs.append((p.ts_us, rec_len))
+        
+        # Look for ExfilChunk pattern
+        match = re.search(r'ExfilChunk-([A-Za-z0-9_-]+)', ua)
+        if match:
+            chunk = match.group(1)
+            chunks.append(chunk)
 
-    # Convert lengths to Base32 symbols: rlen = 480 + v*7
-    # Filter only valid ones in that series.
-    symbols: list[str] = []
-    for _ts, rlen in recs:
-        if rlen < 480 or (rlen - 480) % 7 != 0:
-            continue
-        v = (rlen - 480) // 7
-        if 0 <= v < 32:
-            symbols.append(BASE32_ALPHABET[v])
-
-    # In the signal flow, non-matching "noise" records use lengths that do not fit the 480+v*7 series,
-    # so once we filter by that series we can decode the full stream directly.
-    s = "".join(symbols)
-    pad = "=" * ((8 - (len(s) % 8)) % 8)
-    decoded = base64.b32decode(s + pad).decode("utf-8", errors="ignore")
-    # Expected format:
-    #   KEY:<...>
-    #   FLAG:TDHCTF{...}
-    decoded = decoded.strip()
-    # If something weird happens, fall back to printing at least the flag token.
-    if "KEY:" in decoded and "FLAG:" in decoded:
-        print(decoded)
+    # Concatenate and decode Base64
+    b64_string = "".join(chunks)
+    if not b64_string:
+        print("ERROR: No HTTP header chunks found")
         return
-    m = re.search(r"TDHCTF\{[^}]+\}", decoded)
-    print(decoded if decoded else (m.group(0) if m else ""))
+    
+    # Add padding if needed (Base64 requires length to be multiple of 4)
+    pad = "=" * ((4 - (len(b64_string) % 4)) % 4)
+    try:
+        decoded = base64.urlsafe_b64decode(b64_string + pad).decode("utf-8", errors="ignore")
+        # Expected format:
+        #   KEY:<...>
+        #   FLAG:TDHCTF{...}
+        decoded = decoded.strip()
+        if "KEY:" in decoded and "FLAG:" in decoded:
+            print(decoded)
+            return
+        # Fallback: try to find flag
+        m = re.search(r"TDHCTF\{[^}]+\}", decoded)
+        print(decoded if decoded else (m.group(0) if m else ""))
+    except Exception as e:
+        print(f"ERROR decoding: {e}")
+        print(f"Base64 string: {b64_string}")
 
 
 if __name__ == "__main__":
     main()
-
-
