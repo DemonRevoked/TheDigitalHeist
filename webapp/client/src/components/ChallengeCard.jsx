@@ -55,7 +55,6 @@ export default function ChallengeCard({ challenge, categoryLabel }) {
               )}
             </div>
             <h2>{title}</h2>
-            <p className="slug">/{slug}</p>
           </div>
         </header>
       </article>
@@ -87,7 +86,6 @@ export default function ChallengeCard({ challenge, categoryLabel }) {
                   )}
                 </div>
                 <h2>{title}</h2>
-                <p className="slug">/{slug}</p>
               </div>
               <button
                 className="pill action"

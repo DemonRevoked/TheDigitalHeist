@@ -10,5 +10,5 @@ public final class BuildConfig {
   public static final int VERSION_CODE = 1;
   public static final String VERSION_NAME = "1.0";
   // Field from default config.
-  public static final String MOB01_CHALLENGE_KEY = "f02b16387875ca66c9fadafef8712837430b6f4894de4f6dcff4361090f20d79";
+  public static final String MOB01_CHALLENGE_KEY = "beef73ff7d4354b7d7fb2205cf967a48599a070fa53b2e6ca5e945f90ae13208";
 }

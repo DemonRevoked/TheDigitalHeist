@@ -406,7 +406,7 @@ main() {
   #ensure_docker_running         # assume docker is already running in dev
   generate_all_keys
   start_containers
-
+ 
   echo ""
   echo "=========================================="
   echo "  Setup Complete!"

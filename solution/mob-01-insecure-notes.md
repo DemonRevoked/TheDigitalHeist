@@ -22,5 +22,3 @@ The “lock” check is performed **locally** and compares your input to a hidde
 6. Reconstruct and enter the exact phrase:
    - **`MINT-ACCESS-7429-PROFESSOR`**
 8. The app shows **KEY + FLAG**.
-
-
