@@ -1,6 +1,6 @@
 services:
   web:
-    build: .
+    image: asia-south1-docker.pkg.dev/whizhack-vl-438009/docker-images-for-scenarios/thedigitalheist:web-03-safehouse-v1
     environment:
       PORT: ${PORT}
       SESSION_SECRET: ${SESSION_SECRET}
@@ -12,7 +12,7 @@ services:
       - internal-admin
 
   internal-admin:
-    build: ./internal-admin
+    image: asia-south1-docker.pkg.dev/whizhack-vl-438009/docker-images-for-scenarios/thedigitalheist:web-03-internal-admin-v1
     environment:
       FLAG: ${FLAG}
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}

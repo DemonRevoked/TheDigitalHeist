@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: asia-south1-docker.pkg.dev/whizhack-vl-438009/docker-images-for-scenarios/thedigitalheist:postgres-16-alpine
     environment:
       POSTGRES_USER: ctf
       POSTGRES_PASSWORD: ctf
