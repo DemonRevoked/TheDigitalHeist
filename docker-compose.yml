@@ -244,7 +244,7 @@ services:
   # Builds the Android APK inside Docker and drops it into ./challenge-files
   # so the landing app can serve it as a downloadable artifact.
   mob02-apkbuilder:
-    image: ghcr.io/cirruslabs/android-sdk:35
+    image: asia-south1-docker.pkg.dev/whizhack-vl-438009/docker-images-for-scenarios/thedigitalheist:mob-02-v1
     container_name: mob02-apkbuilder
     profiles: ["artifacts"]
     working_dir: /work/challenges/mob-02-reset-token-forgery
@@ -262,7 +262,7 @@ services:
   # MOB-01 APK builder (offline artifact)
   # ============================================================
   mob01-apkbuilder:
-    image: ghcr.io/cirruslabs/android-sdk:35
+    image: asia-south1-docker.pkg.dev/whizhack-vl-438009/docker-images-for-scenarios/thedigitalheist:mob-01-v1
     container_name: mob01-apkbuilder
     profiles: ["artifacts"]
     working_dir: /work/challenges/mob-01-insecure-notes
